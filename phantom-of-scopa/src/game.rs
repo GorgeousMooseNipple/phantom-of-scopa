@@ -30,13 +30,19 @@ struct PlayerHandSlot;
 struct PlayerCard(UiCard);
 
 #[derive(Component)]
+struct SelectedCard;
+
+#[derive(Component)]
+struct CardImage;
+
+#[derive(Component)]
 struct GameButton;
 
 #[derive(Component)]
-struct TakeButtonComponent;
+struct TakeButton;
 
 #[derive(Component)]
-struct PutButtonComponent;
+struct PutButton;
 
 #[derive(Component)]
 struct HighlightImage;
@@ -118,7 +124,8 @@ pub fn game_plugin(app: &mut App) {
         .add_systems(Update, button_highlights)
         .add_systems(Update, put_button_pressed)
         .add_systems(Update, update_hand)
-        .add_systems(Update, choose_player_card)
+        .add_systems(Update, select_player_card)
+        .add_systems(Update, update_selected_cards.after(select_player_card))
         .add_systems(OnExit(AppState::InGame), despawn_screen::<InGameComponent>)
         .insert_resource(hand);
 }
@@ -198,7 +205,7 @@ fn game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         ..default()
     };
     commands
-        .spawn((take_button, GameButton, TakeButtonComponent))
+        .spawn((take_button, GameButton, TakeButton))
         .with_children(|parent| {
             parent.spawn((
                 ImageBundle {
@@ -224,7 +231,7 @@ fn game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         ..default()
     };
     commands
-        .spawn((put_button, GameButton, PutButtonComponent))
+        .spawn((put_button, GameButton, PutButton))
         .with_children(|parent| {
             parent.spawn((
                 ImageBundle {
@@ -305,7 +312,7 @@ fn random_hand() -> Vec<Card> {
 }
 
 fn put_button_pressed(
-    interaction_query: Query<&Interaction, (Changed<Interaction>, With<PutButtonComponent>)>,
+    interaction_query: Query<&Interaction, (Changed<Interaction>, With<PutButton>)>,
     mut game_events: EventWriter<GameEvent>,
 ) {
     for interaction in &interaction_query {
@@ -340,6 +347,7 @@ fn update_hand(
                         let new_slot_image = commands
                             .spawn((
                                 PlayerCard(card),
+                                CardImage,
                                 Interaction::None,
                                 ImageBundle {
                                     style: Style {
@@ -352,19 +360,6 @@ fn update_hand(
                                     ..default()
                                 },
                             ))
-                            .with_children(|parent| {
-                                parent.spawn(ImageBundle {
-                                    style: Style {
-                                        width: Val::Px(CARD_WIDTH),
-                                        height: Val::Px(CARD_HEIGHT),
-                                        align_items: AlignItems::Center,
-                                        ..default()
-                                    },
-                                    image: UiImage::new(asset_server.load("card_selected.png")),
-                                    visibility: Visibility::Hidden,
-                                    ..default()
-                                });
-                            })
                             .id();
                         commands.entity(slot).add_child(new_slot_image);
                     }
@@ -389,15 +384,37 @@ fn update_hand(
     }
 }
 
-fn choose_player_card(
-    mut player_cards_query: Query<
-        (&Interaction, &mut Children),
-        (Changed<Interaction>, With<PlayerCard>),
-    >,
+fn select_player_card(
+    interacted_card_query: Query<(Entity, &Interaction), (Changed<Interaction>, With<PlayerCard>)>,
+    selected_card_query: Query<Entity, (With<PlayerCard>, With<SelectedCard>)>,
+    mut commands: Commands,
 ) {
-    for (interaction, children) in &player_cards_query {
-        if let Interaction::Pressed = interaction {
-            println!("PRESSED CARD");
+    if let Ok((id, Interaction::Pressed)) = interacted_card_query.get_single() {
+        // If some card in player's hand have been already selected we need to remove it's
+        // "SelectedCard" marker component as only one card in player's hand can be selected at a
+        // time
+        if let Ok(prev_selected_id) = selected_card_query.get_single() {
+            // If currently selected card differs from previously selected one, mark it as
+            // "selected" by adding "SelectedCard" component.
+            if id != prev_selected_id {
+                println!("New card selected");
+                commands.entity(id).insert(SelectedCard);
+            } else {
+                println!("Same card selected");
+            }
+            // In any case - remove "selected" marker from previously selected card. If it's the
+            // same card as the currently selected one, then we deselect it.
+            commands.entity(prev_selected_id).remove::<SelectedCard>();
+        } else {
+            commands.entity(id).insert(SelectedCard);
         }
     }
+}
+
+fn update_selected_cards(
+    mut selected_cards_query: Query<Entity, (Added<SelectedCard>, With<CardImage>)>,
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+) {
+    todo!()
 }
