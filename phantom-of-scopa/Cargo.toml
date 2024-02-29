@@ -8,4 +8,6 @@ edition = "2021"
 [dependencies]
 bevy = "0.13.0"
 bevy_renet = "0.0.10"
+rand = "0.8.5"
 renet = "0.0.14"
+scopa-lib = { path = "../scopa-lib/" }
