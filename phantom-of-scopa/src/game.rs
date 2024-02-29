@@ -13,9 +13,10 @@ pub const CARD_HEIGHT: f32 = 110.0;
 pub const HAND_CARDS_SPACING: f32 = 24.0;
 pub const PLAYER_HAND_X: f32 = 260.0;
 pub const PLAYER_HAND_Y: f32 = 366.0;
-pub const HAND_SLOT_WIDTH: f32 = 78.0;
-pub const HAND_SLOT_HEIGHT: f32 = 113.0;
+pub const CARD_SLOT_WIDTH: f32 = 78.0;
+pub const CARD_SLOT_HEIGHT: f32 = 113.0;
 pub const DEFAULT_VOLUME: f32 = 0.1;
+pub const BORDER_WIDTH: f32 = 4.0;
 
 #[derive(Component)]
 struct InGameComponent;
@@ -60,6 +61,11 @@ enum GameEvent {
 
 #[derive(Resource)]
 struct SelectedCardImage(Handle<Image>);
+
+struct TableSlot {
+    id: Entity,
+    occupied: bool,
+}
 
 #[derive(Resource)]
 struct HandSlots {
@@ -128,7 +134,7 @@ pub fn game_plugin(app: &mut App) {
     app.add_event::<GameEvent>()
         .add_systems(OnEnter(AppState::InGame), game_setup)
         .add_systems(Update, button_highlights)
-        .add_systems(Update, put_button_pressed)
+        .add_systems(Update, take_button_pressed)
         .add_systems(Update, update_hand)
         .add_systems(Update, select_player_card)
         .add_systems(Update, update_selected_cards.after(select_player_card))
@@ -137,7 +143,7 @@ pub fn game_plugin(app: &mut App) {
 }
 
 fn game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    // Insert image of selected card
+    // Insert image of selected card as a resource
     commands.insert_resource(SelectedCardImage(asset_server.load("card_selected.png")));
     // Spawn table background image
     commands
@@ -189,11 +195,11 @@ fn game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             hand_slots.add(create_player_hand_slot(parent, Val::Px(0.0)));
             hand_slots.add(create_player_hand_slot(
                 parent,
-                Val::Px(HAND_SLOT_WIDTH + HAND_CARDS_SPACING),
+                Val::Px(CARD_SLOT_WIDTH + HAND_CARDS_SPACING),
             ));
             hand_slots.add(create_player_hand_slot(
                 parent,
-                Val::Px(HAND_SLOT_WIDTH * 2.0 + HAND_CARDS_SPACING * 2.0),
+                Val::Px(CARD_SLOT_WIDTH * 2.0 + HAND_CARDS_SPACING * 2.0),
             ));
         });
     commands.insert_resource(hand_slots);
@@ -250,6 +256,9 @@ fn game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 HighlightImage,
             ));
         });
+
+    // Spawn table
+    todo!()
 }
 
 fn create_player_hand_slot(parent: &mut ChildBuilder<'_>, left: Val) -> Entity {
@@ -258,8 +267,8 @@ fn create_player_hand_slot(parent: &mut ChildBuilder<'_>, left: Val) -> Entity {
             style: Style {
                 position_type: PositionType::Absolute,
                 left,
-                width: Val::Px(HAND_SLOT_WIDTH),
-                height: Val::Px(HAND_SLOT_HEIGHT),
+                width: Val::Px(CARD_SLOT_WIDTH),
+                height: Val::Px(CARD_SLOT_HEIGHT),
                 align_items: AlignItems::Center,
                 justify_content: JustifyContent::Center,
                 ..default()
@@ -319,8 +328,8 @@ fn random_hand() -> Vec<Card> {
     rand_hand
 }
 
-fn put_button_pressed(
-    interaction_query: Query<&Interaction, (Changed<Interaction>, With<PutButton>)>,
+fn take_button_pressed(
+    interaction_query: Query<&Interaction, (Changed<Interaction>, With<TakeButton>)>,
     mut game_events: EventWriter<GameEvent>,
 ) {
     for interaction in &interaction_query {
