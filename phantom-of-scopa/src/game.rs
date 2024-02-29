@@ -20,6 +20,12 @@ pub const CARD_SLOT_WIDTH: f32 = 78.0;
 pub const CARD_SLOT_HEIGHT: f32 = 113.0;
 pub const DEFAULT_VOLUME: f32 = 0.1;
 pub const BORDER_WIDTH: f32 = 4.0;
+pub const TABLE_WIDTH: f32 = 410.0;
+pub const TABLE_HEIGHT: f32 = 234.0;
+pub const TABLE_X: f32 = 196.0;
+pub const TABLE_Y: f32 = 124.0;
+pub const TABLE_SLOT_WIDTH: f32 = 77.0;
+pub const TABLE_SLOT_HEIGHT: f32 = 111.0;
 
 #[derive(Event)]
 enum GameEvent {
@@ -29,9 +35,52 @@ enum GameEvent {
 #[derive(Resource)]
 struct SelectedCardImage(Handle<Image>);
 
-struct TableSlot {
+struct TableSlotEntity {
     id: Entity,
-    occupied: bool,
+    vacant: bool,
+}
+
+impl TableSlotEntity {
+    fn new(id: Entity) -> Self {
+        Self { id, vacant: true }
+    }
+
+    fn id(&self) -> Entity {
+        self.id
+    }
+
+    fn is_vacant(&self) -> bool {
+        self.vacant
+    }
+
+    fn occupy(&mut self) {
+        self.vacant = false;
+    }
+}
+
+#[derive(Resource)]
+struct TableSlots {
+    pub slots: Vec<TableSlotEntity>,
+}
+
+impl TableSlots {
+    fn new(slots: Vec<TableSlotEntity>) -> Self {
+        Self { slots }
+    }
+
+    fn add(&mut self, entity: Entity) {
+        self.slots.push(TableSlotEntity::new(entity));
+    }
+
+    fn insert(&mut self) -> Option<Entity> {
+        for i in 0..self.slots.len() {
+            if self.slots[i].is_vacant() {
+                self.slots[i].occupy();
+                return Some(self.slots[i].id());
+            }
+        }
+        None
+    }
 }
 
 pub fn game_plugin(app: &mut App) {
@@ -43,6 +92,7 @@ pub fn game_plugin(app: &mut App) {
         .add_systems(Update, update_hand)
         .add_systems(Update, select_player_card)
         .add_systems(Update, update_selected_cards.after(select_player_card))
+        .add_systems(Update, put_button_pressed)
         .add_systems(OnExit(AppState::InGame), despawn_screen::<InGameComponent>);
 }
 
@@ -157,7 +207,48 @@ fn game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         });
 
     // Spawn table
-    todo!()
+    let mut table_slots = TableSlots::new(Vec::with_capacity(10));
+    commands
+        .spawn((
+            TableArea,
+            NodeBundle {
+                style: Style {
+                    width: Val::Px(TABLE_WIDTH),
+                    height: Val::Px(TABLE_HEIGHT),
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(TABLE_X),
+                    top: Val::Px(TABLE_Y),
+                    ..default()
+                },
+                ..default()
+            },
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                HighlightImage,
+                ImageBundle {
+                    style: Style {
+                        width: Val::Px(TABLE_WIDTH),
+                        height: Val::Px(TABLE_HEIGHT),
+                        ..default()
+                    },
+                    image: UiImage::new(asset_server.load("table_highlight.png")),
+                    visibility: Visibility::Hidden,
+                    ..default()
+                },
+            ));
+            table_slots.add(create_table_slot(parent, 0, 1));
+            table_slots.add(create_table_slot(parent, 1, 3));
+            table_slots.add(create_table_slot(parent, 1, 1));
+            table_slots.add(create_table_slot(parent, 0, 3));
+            table_slots.add(create_table_slot(parent, 0, 2));
+            table_slots.add(create_table_slot(parent, 1, 2));
+            table_slots.add(create_table_slot(parent, 0, 0));
+            table_slots.add(create_table_slot(parent, 1, 4));
+            table_slots.add(create_table_slot(parent, 1, 0));
+            table_slots.add(create_table_slot(parent, 0, 4));
+        });
+    commands.insert_resource(table_slots);
 }
 
 fn create_player_hand_slot(parent: &mut ChildBuilder<'_>, left: Val) -> Entity {
@@ -177,6 +268,29 @@ fn create_player_hand_slot(parent: &mut ChildBuilder<'_>, left: Val) -> Entity {
         PlayerHandSlot,
     );
     parent.spawn(hand_slot).id()
+}
+
+fn create_table_slot(parent: &mut ChildBuilder<'_>, row: usize, column: usize) -> Entity {
+    let x_offset = BORDER_WIDTH + (TABLE_SLOT_WIDTH + BORDER_WIDTH) * column as f32;
+    let y_offset = BORDER_WIDTH + (TABLE_SLOT_HEIGHT + BORDER_WIDTH) * row as f32;
+    parent
+        .spawn((
+            TableSlot,
+            NodeBundle {
+                style: Style {
+                    position_type: PositionType::Absolute,
+                    width: Val::Px(CARD_SLOT_WIDTH),
+                    height: Val::Px(CARD_SLOT_HEIGHT),
+                    left: Val::Px(x_offset),
+                    top: Val::Px(y_offset),
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
+                    ..default()
+                },
+                ..default()
+            },
+        ))
+        .id()
 }
 
 fn button_highlights(
@@ -234,6 +348,44 @@ fn take_button_pressed(
     for interaction in &interaction_query {
         if let Interaction::Pressed = *interaction {
             game_events.send(GameEvent::NewHand(random_hand()));
+        }
+    }
+}
+
+fn put_button_pressed(
+    interaction_query: Query<&Interaction, (Changed<Interaction>, With<PutButton>)>,
+    selected_card: Query<Entity, (With<PlayerCard>, With<SelectedCard>)>,
+    asset_server: Res<AssetServer>,
+    mut table_slots: ResMut<TableSlots>,
+    mut commands: Commands,
+) {
+    if let Ok(card_id) = selected_card.get_single() {
+        for interaction in &interaction_query {
+            if let Interaction::Pressed = *interaction {
+                if let Some(slot_id) = table_slots.insert() {
+                    let mut card = commands.entity(card_id);
+                    card.remove::<SelectedCard>();
+                    card.insert(RemovedCardSelection);
+                    card.remove::<PlayerCard>();
+                    card.insert(TableCard);
+                    card.set_parent(slot_id);
+                    commands.spawn((
+                        SoundEffect,
+                        AudioBundle {
+                            source: asset_server.load("audio/Card_place02.ogg"),
+                            settings: PlaybackSettings {
+                                mode: bevy::audio::PlaybackMode::Once,
+                                volume: Volume::new(DEFAULT_VOLUME),
+                                paused: false,
+                                spatial: false,
+                                ..default()
+                            },
+                        },
+                    ));
+                } else {
+                    todo!("Show an error message in case if a table is full of cards")
+                }
+            }
         }
     }
 }

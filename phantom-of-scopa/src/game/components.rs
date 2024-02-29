@@ -37,6 +37,15 @@ pub struct HighlightImage;
 #[derive(Component)]
 pub struct SoundEffect;
 
+#[derive(Component)]
+pub struct TableArea;
+
+#[derive(Component)]
+pub struct TableSlot;
+
+#[derive(Component)]
+pub struct TableCard;
+
 #[derive(Debug, Clone, Copy)]
 pub struct UiCard {
     card: Card,
