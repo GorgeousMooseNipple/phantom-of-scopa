@@ -1,7 +1,10 @@
+mod components;
+
 use bevy::audio::Volume;
 use bevy::prelude::*;
 
 use super::{despawn_screen, AppState};
+use components::*;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use scopa_lib::card::*;
@@ -18,42 +21,6 @@ pub const CARD_SLOT_HEIGHT: f32 = 113.0;
 pub const DEFAULT_VOLUME: f32 = 0.1;
 pub const BORDER_WIDTH: f32 = 4.0;
 
-#[derive(Component)]
-struct InGameComponent;
-
-#[derive(Component)]
-struct PlayerHandArea;
-
-#[derive(Component)]
-struct PlayerHandSlot;
-
-#[derive(Component)]
-struct PlayerCard(UiCard);
-
-#[derive(Component)]
-struct SelectedCard;
-
-#[derive(Component)]
-struct RemovedCardSelection;
-
-#[derive(Component)]
-struct CardImage;
-
-#[derive(Component)]
-struct GameButton;
-
-#[derive(Component)]
-struct TakeButton;
-
-#[derive(Component)]
-struct PutButton;
-
-#[derive(Component)]
-struct HighlightImage;
-
-#[derive(Component)]
-struct SoundEffect;
-
 #[derive(Event)]
 enum GameEvent {
     NewHand(Vec<Card>),
@@ -67,69 +34,7 @@ struct TableSlot {
     occupied: bool,
 }
 
-#[derive(Resource)]
-struct HandSlots {
-    pub entities: Vec<Entity>,
-}
-
-impl HandSlots {
-    fn new() -> Self {
-        Self {
-            entities: Vec::with_capacity(3),
-        }
-    }
-
-    fn add(&mut self, card_slot: Entity) {
-        self.entities.push(card_slot);
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-struct UiCard {
-    card: Card,
-}
-
-impl UiCard {
-    fn new(card: Card) -> Self {
-        Self { card }
-    }
-
-    fn asset_path(&self) -> String {
-        use Suite::*;
-        let suite = match self.card.suite {
-            Clubs => "clubs",
-            Coins => "coins",
-            Cups => "cups",
-            Swords => "swords",
-        };
-        let value = self.card.value().to_string();
-        format!("cards/{}_{}.png", suite, value)
-    }
-}
-
-#[derive(Resource)]
-struct PlayerHand {
-    pub hand: [Option<UiCard>; 3],
-}
-
-impl PlayerHand {
-    fn new(hand: [UiCard; 3]) -> Self {
-        Self {
-            hand: [Some(hand[0]), Some(hand[1]), Some(hand[2])],
-        }
-    }
-
-    fn put_on_table(&mut self, idx: usize) -> Option<UiCard> {
-        self.hand[idx].take()
-    }
-}
-
 pub fn game_plugin(app: &mut App) {
-    let hand = PlayerHand::new([
-        UiCard::new(Card::new(Suite::Swords, CardValue::Cavallo)),
-        UiCard::new(Card::new(Suite::Coins, CardValue::Fante)),
-        UiCard::new(Card::new(Suite::Cups, CardValue::Seven)),
-    ]);
     // Add systems to app
     app.add_event::<GameEvent>()
         .add_systems(OnEnter(AppState::InGame), game_setup)
@@ -138,8 +43,7 @@ pub fn game_plugin(app: &mut App) {
         .add_systems(Update, update_hand)
         .add_systems(Update, select_player_card)
         .add_systems(Update, update_selected_cards.after(select_player_card))
-        .add_systems(OnExit(AppState::InGame), despawn_screen::<InGameComponent>)
-        .insert_resource(hand);
+        .add_systems(OnExit(AppState::InGame), despawn_screen::<InGameComponent>);
 }
 
 fn game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -174,7 +78,6 @@ fn game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         });
 
     // Spawn player's hand
-    let mut hand_slots = HandSlots::new();
     commands
         .spawn((
             NodeBundle {
@@ -192,17 +95,13 @@ fn game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             PlayerHandArea,
         ))
         .with_children(|parent| {
-            hand_slots.add(create_player_hand_slot(parent, Val::Px(0.0)));
-            hand_slots.add(create_player_hand_slot(
-                parent,
-                Val::Px(CARD_SLOT_WIDTH + HAND_CARDS_SPACING),
-            ));
-            hand_slots.add(create_player_hand_slot(
+            create_player_hand_slot(parent, Val::Px(0.0));
+            create_player_hand_slot(parent, Val::Px(CARD_SLOT_WIDTH + HAND_CARDS_SPACING));
+            create_player_hand_slot(
                 parent,
                 Val::Px(CARD_SLOT_WIDTH * 2.0 + HAND_CARDS_SPACING * 2.0),
-            ));
+            );
         });
-    commands.insert_resource(hand_slots);
 
     // Create buttons
     // Take button
