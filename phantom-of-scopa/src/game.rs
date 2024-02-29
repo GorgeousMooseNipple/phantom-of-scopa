@@ -33,6 +33,9 @@ struct PlayerCard(UiCard);
 struct SelectedCard;
 
 #[derive(Component)]
+struct RemovedCardSelection;
+
+#[derive(Component)]
 struct CardImage;
 
 #[derive(Component)]
@@ -54,6 +57,9 @@ struct SoundEffect;
 enum GameEvent {
     NewHand(Vec<Card>),
 }
+
+#[derive(Resource)]
+struct SelectedCardImage(Handle<Image>);
 
 #[derive(Resource)]
 struct HandSlots {
@@ -131,6 +137,8 @@ pub fn game_plugin(app: &mut App) {
 }
 
 fn game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+    // Insert image of selected card
+    commands.insert_resource(SelectedCardImage(asset_server.load("card_selected.png")));
     // Spawn table background image
     commands
         .spawn((
@@ -397,24 +405,50 @@ fn select_player_card(
             // If currently selected card differs from previously selected one, mark it as
             // "selected" by adding "SelectedCard" component.
             if id != prev_selected_id {
-                println!("New card selected");
                 commands.entity(id).insert(SelectedCard);
-            } else {
-                println!("Same card selected");
             }
             // In any case - remove "selected" marker from previously selected card. If it's the
             // same card as the currently selected one, then we deselect it.
-            commands.entity(prev_selected_id).remove::<SelectedCard>();
+            let mut prev_selected = commands.entity(prev_selected_id);
+            prev_selected.remove::<SelectedCard>();
+            prev_selected.insert(RemovedCardSelection);
         } else {
             commands.entity(id).insert(SelectedCard);
         }
     }
 }
 
+fn create_selected_image(image: Handle<Image>) -> ImageBundle {
+    ImageBundle {
+        style: Style {
+            width: Val::Px(CARD_WIDTH),
+            height: Val::Px(CARD_HEIGHT),
+            align_self: AlignSelf::Center,
+            ..default()
+        },
+        image: UiImage::new(image),
+        ..default()
+    }
+}
+
 fn update_selected_cards(
-    mut selected_cards_query: Query<Entity, (Added<SelectedCard>, With<CardImage>)>,
+    selected_cards_query: Query<Entity, (With<CardImage>, Added<SelectedCard>)>,
+    deselected_cards_query: Query<Entity, (With<CardImage>, With<RemovedCardSelection>)>,
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    selected_image: Res<SelectedCardImage>,
 ) {
-    todo!()
+    for id in &selected_cards_query {
+        let selected_image_id = commands
+            .spawn(create_selected_image(selected_image.0.clone()))
+            .id();
+        commands.entity(id).add_child(selected_image_id);
+    }
+    for id in &deselected_cards_query {
+        let mut deselected_card = commands.entity(id);
+        deselected_card.remove::<RemovedCardSelection>();
+        // Those entities can only have selection image as a child, so clear all children
+        // Kind of unclear which of these two methods to use in this case
+        // deselected_card.clear_children();
+        deselected_card.despawn_descendants();
+    }
 }
