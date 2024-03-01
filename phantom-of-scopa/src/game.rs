@@ -1,10 +1,13 @@
+#![allow(clippy::type_complexity)]
 mod components;
+mod popups;
 
 use bevy::audio::Volume;
 use bevy::prelude::*;
 
 use super::{despawn_screen, AppState};
 use components::*;
+use popups::*;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use scopa_lib::card::*;
@@ -30,13 +33,6 @@ pub const TABLE_SLOT_HEIGHT: f32 = 111.0;
 #[derive(Event)]
 enum GameEvent {
     NewHand(Vec<Card>),
-}
-
-#[derive(Event)]
-struct PopUpEvent {
-    pub text: String,
-    pub duration: f64,
-    pub location: PopUpLocation,
 }
 
 #[derive(Resource)]
@@ -109,6 +105,7 @@ pub fn game_plugin(app: &mut App) {
                 .after(select_table_card),
         )
         .add_systems(Update, put_button_pressed)
+        .add_systems(Update, mouse_input)
         .add_systems(OnExit(AppState::InGame), despawn_screen::<InGameComponent>);
 }
 
@@ -241,6 +238,7 @@ fn game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         ))
         .with_children(|parent| {
             parent.spawn((
+                TableArea,
                 HighlightImage,
                 ImageBundle {
                     style: Style {
@@ -443,6 +441,7 @@ fn update_hand(
                         let new_slot_image = commands
                             .spawn((
                                 PlayerCard(card),
+                                Draggable,
                                 CardImage,
                                 Interaction::None,
                                 ImageBundle {
@@ -558,77 +557,9 @@ fn update_selected_cards(
     }
 }
 
-fn handle_popups(
-    popups_query: Query<(Entity, &PopUpMessage)>,
-    mut commands: Commands,
-    mut popup_events: EventReader<PopUpEvent>,
-    time: Res<Time>,
-    asset_server: Res<AssetServer>,
+fn mouse_input(
+    mouse_button_input: Res<ButtonInput<MouseButton>>,
+    mut cursor_moved_events: EventReader<CursorMoved>,
 ) {
-    for event in popup_events.read() {
-        // Clear popups that are already present on the same part of the screen
-        for (id, popup) in &popups_query {
-            if popup.location == event.location {
-                commands.entity(id).despawn_recursive();
-            }
-        }
-        let align_popup = match event.location {
-            PopUpLocation::Top => AlignSelf::Start,
-            PopUpLocation::Bottom => AlignSelf::End,
-        };
-        commands
-            .spawn((
-                PopUpMessage {
-                    expiration_time: time.elapsed_seconds_f64() + event.duration,
-                    location: event.location,
-                },
-                NodeBundle {
-                    style: Style {
-                        position_type: PositionType::Absolute,
-                        align_self: align_popup,
-                        justify_self: JustifySelf::Center,
-                        align_items: AlignItems::Center,
-                        justify_content: JustifyContent::Center,
-                        width: Val::Percent(60.0),
-                        height: Val::Percent(15.0),
-                        margin: UiRect::vertical(Val::Px(10.0)),
-                        ..default()
-                    },
-                    background_color: BackgroundColor(Color::rgba_u8(29, 32, 33, 235)),
-                    ..default()
-                },
-            ))
-            .with_children(|parent| {
-                parent.spawn((
-                    PopUpText,
-                    TextBundle {
-                        text: Text {
-                            sections: vec![TextSection {
-                                value: event.text.clone(),
-                                style: TextStyle {
-                                    font: asset_server.load("fonts/DroidSerif-Regular.ttf"),
-                                    font_size: 17.0,
-                                    color: Color::rgba_u8(218, 210, 41, 255),
-                                },
-                            }],
-                            justify: JustifyText::Center,
-                            ..default()
-                        },
-                        ..default()
-                    },
-                ));
-            });
-    }
-}
-
-fn clear_expired_popups(
-    popups_query: Query<(Entity, &PopUpMessage)>,
-    time: Res<Time>,
-    mut commands: Commands,
-) {
-    for (id, message) in &popups_query {
-        if time.elapsed_seconds_f64() > message.expiration_time {
-            commands.entity(id).despawn_recursive();
-        }
-    }
+    todo!()
 }

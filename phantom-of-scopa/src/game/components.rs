@@ -47,21 +47,14 @@ pub struct TableSlot;
 #[derive(Component, Debug)]
 pub struct TableCard;
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub enum PopUpLocation {
-    Top,
-    #[default]
-    Bottom,
-}
+#[derive(Component, Debug)]
+pub struct Draggable;
 
 #[derive(Component, Debug)]
-pub struct PopUpMessage {
-    pub expiration_time: f64,
-    pub location: PopUpLocation,
-}
+pub struct Dragged;
 
 #[derive(Component, Debug)]
-pub struct PopUpText;
+pub struct DropIn;
 
 #[derive(Debug, Clone, Copy)]
 pub struct UiCard {
