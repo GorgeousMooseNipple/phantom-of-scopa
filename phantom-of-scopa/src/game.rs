@@ -32,6 +32,13 @@ enum GameEvent {
     NewHand(Vec<Card>),
 }
 
+#[derive(Event)]
+struct PopUpEvent {
+    pub text: String,
+    pub duration: f64,
+    pub location: PopUpLocation,
+}
+
 #[derive(Resource)]
 struct SelectedCardImage(Handle<Image>);
 
@@ -86,7 +93,10 @@ impl TableSlots {
 pub fn game_plugin(app: &mut App) {
     // Add systems to app
     app.add_event::<GameEvent>()
+        .add_event::<PopUpEvent>()
         .add_systems(OnEnter(AppState::InGame), game_setup)
+        .add_systems(Update, handle_popups)
+        .add_systems(Update, clear_expired_popups)
         .add_systems(Update, button_highlights)
         .add_systems(Update, take_button_pressed)
         .add_systems(Update, update_hand)
@@ -363,6 +373,7 @@ fn put_button_pressed(
     player_selected_card: Query<Entity, (With<PlayerCard>, With<SelectedCard>)>,
     table_selected_cards: Query<Entity, (With<TableCard>, With<SelectedCard>)>,
     asset_server: Res<AssetServer>,
+    mut popup_events: EventWriter<PopUpEvent>,
     mut table_slots: ResMut<TableSlots>,
     mut commands: Commands,
 ) {
@@ -389,14 +400,18 @@ fn put_button_pressed(
                             },
                         },
                     ));
-                    // Remove selection from all selected cards on the table
-                    for selected_id in &table_selected_cards {
-                        let mut selected_card = commands.entity(selected_id);
-                        selected_card.remove::<SelectedCard>();
-                        selected_card.insert(RemovedCardSelection);
-                    }
                 } else {
-                    todo!("Show an error message in case if a table is full of cards")
+                    popup_events.send(PopUpEvent {
+                        text: "The table is full".into(),
+                        duration: 2.0,
+                        location: PopUpLocation::Bottom,
+                    });
+                }
+                // Remove selection from all selected cards on the table
+                for selected_id in &table_selected_cards {
+                    let mut selected_card = commands.entity(selected_id);
+                    selected_card.remove::<SelectedCard>();
+                    selected_card.insert(RemovedCardSelection);
                 }
             }
         }
@@ -540,5 +555,80 @@ fn update_selected_cards(
         // Kind of unclear which of these two methods to use in this case
         // deselected_card.clear_children();
         deselected_card.despawn_descendants();
+    }
+}
+
+fn handle_popups(
+    popups_query: Query<(Entity, &PopUpMessage)>,
+    mut commands: Commands,
+    mut popup_events: EventReader<PopUpEvent>,
+    time: Res<Time>,
+    asset_server: Res<AssetServer>,
+) {
+    for event in popup_events.read() {
+        // Clear popups that are already present on the same part of the screen
+        for (id, popup) in &popups_query {
+            if popup.location == event.location {
+                commands.entity(id).despawn_recursive();
+            }
+        }
+        let align_popup = match event.location {
+            PopUpLocation::Top => AlignSelf::Start,
+            PopUpLocation::Bottom => AlignSelf::End,
+        };
+        commands
+            .spawn((
+                PopUpMessage {
+                    expiration_time: time.elapsed_seconds_f64() + event.duration,
+                    location: event.location,
+                },
+                NodeBundle {
+                    style: Style {
+                        position_type: PositionType::Absolute,
+                        align_self: align_popup,
+                        justify_self: JustifySelf::Center,
+                        align_items: AlignItems::Center,
+                        justify_content: JustifyContent::Center,
+                        width: Val::Percent(60.0),
+                        height: Val::Percent(15.0),
+                        margin: UiRect::vertical(Val::Px(10.0)),
+                        ..default()
+                    },
+                    background_color: BackgroundColor(Color::rgba_u8(29, 32, 33, 235)),
+                    ..default()
+                },
+            ))
+            .with_children(|parent| {
+                parent.spawn((
+                    PopUpText,
+                    TextBundle {
+                        text: Text {
+                            sections: vec![TextSection {
+                                value: event.text.clone(),
+                                style: TextStyle {
+                                    font: asset_server.load("fonts/DroidSerif-Regular.ttf"),
+                                    font_size: 17.0,
+                                    color: Color::rgba_u8(218, 210, 41, 255),
+                                },
+                            }],
+                            justify: JustifyText::Center,
+                            ..default()
+                        },
+                        ..default()
+                    },
+                ));
+            });
+    }
+}
+
+fn clear_expired_popups(
+    popups_query: Query<(Entity, &PopUpMessage)>,
+    time: Res<Time>,
+    mut commands: Commands,
+) {
+    for (id, message) in &popups_query {
+        if time.elapsed_seconds_f64() > message.expiration_time {
+            commands.entity(id).despawn_recursive();
+        }
     }
 }

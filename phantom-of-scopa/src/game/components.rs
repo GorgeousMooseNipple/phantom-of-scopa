@@ -1,50 +1,67 @@
 use bevy::ecs::component::Component;
+use bevy::ui::AlignSelf;
 use scopa_lib::card::*;
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct InGameComponent;
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct PlayerHandArea;
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct PlayerHandSlot;
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct PlayerCard(pub UiCard);
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct SelectedCard;
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct RemovedCardSelection;
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct CardImage;
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct GameButton;
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct TakeButton;
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct PutButton;
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct HighlightImage;
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct SoundEffect;
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct TableArea;
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct TableSlot;
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct TableCard;
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum PopUpLocation {
+    Top,
+    #[default]
+    Bottom,
+}
+
+#[derive(Component, Debug)]
+pub struct PopUpMessage {
+    pub expiration_time: f64,
+    pub location: PopUpLocation,
+}
+
+#[derive(Component, Debug)]
+pub struct PopUpText;
 
 #[derive(Debug, Clone, Copy)]
 pub struct UiCard {
