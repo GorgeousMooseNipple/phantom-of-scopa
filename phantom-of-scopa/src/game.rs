@@ -91,7 +91,13 @@ pub fn game_plugin(app: &mut App) {
         .add_systems(Update, take_button_pressed)
         .add_systems(Update, update_hand)
         .add_systems(Update, select_player_card)
-        .add_systems(Update, update_selected_cards.after(select_player_card))
+        .add_systems(Update, select_table_card)
+        .add_systems(
+            Update,
+            update_selected_cards
+                .after(select_player_card)
+                .after(select_table_card),
+        )
         .add_systems(Update, put_button_pressed)
         .add_systems(OnExit(AppState::InGame), despawn_screen::<InGameComponent>);
 }
@@ -354,12 +360,13 @@ fn take_button_pressed(
 
 fn put_button_pressed(
     interaction_query: Query<&Interaction, (Changed<Interaction>, With<PutButton>)>,
-    selected_card: Query<Entity, (With<PlayerCard>, With<SelectedCard>)>,
+    player_selected_card: Query<Entity, (With<PlayerCard>, With<SelectedCard>)>,
+    table_selected_cards: Query<Entity, (With<TableCard>, With<SelectedCard>)>,
     asset_server: Res<AssetServer>,
     mut table_slots: ResMut<TableSlots>,
     mut commands: Commands,
 ) {
-    if let Ok(card_id) = selected_card.get_single() {
+    if let Ok(card_id) = player_selected_card.get_single() {
         for interaction in &interaction_query {
             if let Interaction::Pressed = *interaction {
                 if let Some(slot_id) = table_slots.insert() {
@@ -382,6 +389,12 @@ fn put_button_pressed(
                             },
                         },
                     ));
+                    // Remove selection from all selected cards on the table
+                    for selected_id in &table_selected_cards {
+                        let mut selected_card = commands.entity(selected_id);
+                        selected_card.remove::<SelectedCard>();
+                        selected_card.insert(RemovedCardSelection);
+                    }
                 } else {
                     todo!("Show an error message in case if a table is full of cards")
                 }
@@ -474,6 +487,23 @@ fn select_player_card(
             prev_selected.insert(RemovedCardSelection);
         } else {
             commands.entity(id).insert(SelectedCard);
+        }
+    }
+}
+
+fn select_table_card(
+    interacted_card_query: Query<(Entity, &Interaction), (Changed<Interaction>, With<TableCard>)>,
+    selected_card_query: Query<Entity, (With<TableCard>, With<SelectedCard>)>,
+    mut commands: Commands,
+) {
+    if let Ok((id, Interaction::Pressed)) = interacted_card_query.get_single() {
+        let mut card = commands.entity(id);
+        // If this card is already selected, then remove it's selection. Select it otherwise.
+        if selected_card_query.get(id).is_ok() {
+            card.remove::<SelectedCard>();
+            card.insert(RemovedCardSelection);
+        } else {
+            card.insert(SelectedCard);
         }
     }
 }
