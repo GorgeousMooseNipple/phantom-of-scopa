@@ -88,26 +88,29 @@ impl TableSlots {
 }
 
 #[derive(Resource)]
-struct CursorEntity {
+struct DragCursor {
     entity: Entity,
-    position: Vec2,
+    to_drag: Option<Entity>,
 }
 
-impl CursorEntity {
-    fn new(entity: Entity, position: Vec2) -> Self {
-        Self { entity, position }
+impl DragCursor {
+    fn new(entity: Entity) -> Self {
+        Self {
+            entity,
+            to_drag: None,
+        }
     }
 
-    fn entity(&self) -> Entity {
+    pub fn entity(&self) -> Entity {
         self.entity
     }
 
-    fn update_position(&mut self, new_position: Vec2) {
-        self.position = new_position;
+    pub fn drag_target(&mut self, drag_target: Entity) {
+        self.to_drag = Some(drag_target);
     }
 
-    fn current_position(&self) -> Vec2 {
-        self.position
+    pub fn take_dragged(&mut self) -> Option<Entity> {
+        self.to_drag.take()
     }
 }
 
@@ -130,7 +133,8 @@ pub fn game_plugin(app: &mut App) {
                 .after(select_hand_card)
                 .after(select_table_card),
         )
-        .add_systems(Update, update_cursor_entity)
+        // .add_systems(Update, update_cursor_entity)
+        .add_systems(Update, highlight_on_drag.after(handle_drag))
         .add_systems(Update, put_button_pressed)
         .add_systems(OnExit(AppState::InGame), despawn_screen::<InGameComponent>);
 }
@@ -250,6 +254,7 @@ fn game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn((
             TableArea,
+            Interaction::None,
             NodeBundle {
                 style: Style {
                     width: Val::Px(TABLE_WIDTH),
@@ -267,7 +272,6 @@ fn game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 TableArea,
                 DropIn,
                 HighlightImage,
-                Interaction::None,
                 ImageBundle {
                     style: Style {
                         width: Val::Px(TABLE_WIDTH),
@@ -293,7 +297,7 @@ fn game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(table_slots);
 
     // Cursor tracking entity for drag and drop
-    let cursor_entity = CursorEntity::new(
+    let cursor_entity = DragCursor::new(
         commands
             .spawn((
                 CursorMarker,
@@ -310,7 +314,6 @@ fn game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 },
             ))
             .id(),
-        Vec2::from_array([0.0, 0.0]),
     );
     commands.insert_resource(cursor_entity);
 }
@@ -437,19 +440,7 @@ fn put_button_pressed(
                     card.remove::<Draggable>();
                     card.remove::<RelativeCursorPosition>();
                     card.set_parent(slot_id);
-                    commands.spawn((
-                        SoundEffect,
-                        AudioBundle {
-                            source: asset_server.load("audio/Card_place02.ogg"),
-                            settings: PlaybackSettings {
-                                mode: bevy::audio::PlaybackMode::Once,
-                                volume: Volume::new(DEFAULT_VOLUME),
-                                paused: false,
-                                spatial: false,
-                                ..default()
-                            },
-                        },
-                    ));
+                    play_audio(asset_server.load("audio/Card_place02.ogg"), &mut commands);
                 } else {
                     popup_events.send(PopUpEvent {
                         text: "The table is full".into(),
@@ -512,19 +503,7 @@ fn update_hand(
                         commands.entity(slot).add_child(new_slot_image);
                     }
                     // Play hand deal sound
-                    commands.spawn((
-                        SoundEffect,
-                        AudioBundle {
-                            source: asset_server.load("audio/Card_Deal02.ogg"),
-                            settings: PlaybackSettings {
-                                mode: bevy::audio::PlaybackMode::Once,
-                                volume: Volume::new(DEFAULT_VOLUME),
-                                paused: false,
-                                spatial: false,
-                                ..default()
-                            },
-                        },
-                    ));
+                    play_audio(asset_server.load("audio/Card_Deal02.ogg"), &mut commands);
                 }
             }
             _ => {}
@@ -610,51 +589,95 @@ fn update_selected_cards(
     }
 }
 
+fn play_audio(asset: Handle<AudioSource>, commands: &mut Commands) {
+    commands.spawn((
+        SoundEffect,
+        AudioBundle {
+            source: asset,
+            settings: PlaybackSettings {
+                mode: bevy::audio::PlaybackMode::Once,
+                volume: Volume::new(DEFAULT_VOLUME),
+                paused: false,
+                spatial: false,
+                ..default()
+            },
+        },
+    ));
+}
+
 fn handle_drag(
     mut draggable_query: Query<
         (Entity, &Parent, &RelativeCursorPosition),
         (With<Draggable>, Without<Dragged>),
     >,
     dragged_query: Query<(Entity, &Dragged), With<Dragged>>,
+    mut cursor_query: Query<&mut Style, With<CursorMarker>>,
     mouse_pressed: Res<ButtonInput<MouseButton>>,
+    mut cursor_moved_events: EventReader<CursorMoved>,
     mut commands: Commands,
-    cursor_entity: Res<CursorEntity>,
+    mut drag_cursor: ResMut<DragCursor>,
 ) {
     if mouse_pressed.just_pressed(MouseButton::Left) {
-        if let Some((id, parent, _)) = draggable_query.iter_mut().find(|(_, _, c)| c.mouse_over()) {
-            println!("Just pressed on draggable!");
-            commands
-                .entity(id)
-                .insert(Dragged::leaving(parent.get()))
-                .remove_parent_in_place()
-                .set_parent(cursor_entity.entity());
+        if let Some((id, _, _)) = draggable_query.iter_mut().find(|(_, _, c)| c.mouse_over()) {
+            drag_cursor.drag_target(id);
         }
     }
     if mouse_pressed.just_released(MouseButton::Left) {
         if let Ok((id, dragged)) = dragged_query.get_single() {
-            println!("Released dragged!");
             commands
                 .entity(id)
                 .set_parent(dragged.return_to())
                 .remove::<Dragged>();
         }
+        drag_cursor.take_dragged();
     }
-}
-
-fn update_cursor_entity(
-    mut cursor_query: Query<&mut Style, With<CursorMarker>>,
-    mut cursor_moved_events: EventReader<CursorMoved>,
-) {
     for moved in cursor_moved_events.read() {
         if let Ok(mut cursor_entity_style) = cursor_query.get_single_mut() {
             cursor_entity_style.left = Val::Px(moved.position.x);
             cursor_entity_style.top = Val::Px(moved.position.y);
         }
+        if let Some(to_drag) = drag_cursor.take_dragged() {
+            if let Ok((_, parent, _)) = draggable_query.get_mut(to_drag) {
+                commands
+                    .entity(to_drag)
+                    .insert(Dragged::leaving(parent.get()))
+                    .remove::<SelectedCard>()
+                    .insert(RemovedCardSelection)
+                    .remove_parent_in_place()
+                    .set_parent(drag_cursor.entity());
+            }
+        }
     }
 }
 
 fn highlight_on_drag(
-    drop_area_query: Query<(&Interaction, &mut Visibility), (With<DropIn>, With<HighlightImage>)>,
+    dragged_query: Query<&Dragged>,
+    table_area_interaction: Query<&Interaction, (Changed<Interaction>, With<TableArea>)>,
+    mut drop_area_query: Query<&mut Visibility, (With<DropIn>, With<HighlightImage>)>,
 ) {
-    todo!()
+    // Check if there is a dragged object
+    if dragged_query.get_single().is_ok() {
+        for interaction in &table_area_interaction {
+            match interaction {
+                Interaction::Hovered => {
+                    if let Ok(mut drop_area_visibility) = drop_area_query.get_single_mut() {
+                        if *drop_area_visibility != Visibility::Visible {
+                            *drop_area_visibility = Visibility::Visible;
+                        }
+                    }
+                }
+                _ => {
+                    if let Ok(mut drop_area_visibility) = drop_area_query.get_single_mut() {
+                        if *drop_area_visibility != Visibility::Hidden {
+                            *drop_area_visibility = Visibility::Hidden;
+                        }
+                    }
+                }
+            }
+        }
+    } else if let Ok(mut drop_area_visibility) = drop_area_query.get_single_mut() {
+        if *drop_area_visibility != Visibility::Hidden {
+            *drop_area_visibility = Visibility::Hidden;
+        }
+    }
 }
