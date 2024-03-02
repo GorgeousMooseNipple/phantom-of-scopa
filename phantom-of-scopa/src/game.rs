@@ -4,6 +4,7 @@ mod popups;
 
 use bevy::audio::Volume;
 use bevy::prelude::*;
+use bevy::ui::RelativeCursorPosition;
 
 use super::{despawn_screen, AppState};
 use components::*;
@@ -86,6 +87,30 @@ impl TableSlots {
     }
 }
 
+#[derive(Resource)]
+struct CursorEntity {
+    entity: Entity,
+    position: Vec2,
+}
+
+impl CursorEntity {
+    fn new(entity: Entity, position: Vec2) -> Self {
+        Self { entity, position }
+    }
+
+    fn entity(&self) -> Entity {
+        self.entity
+    }
+
+    fn update_position(&mut self, new_position: Vec2) {
+        self.position = new_position;
+    }
+
+    fn current_position(&self) -> Vec2 {
+        self.position
+    }
+}
+
 pub fn game_plugin(app: &mut App) {
     // Add systems to app
     app.add_event::<GameEvent>()
@@ -96,16 +121,17 @@ pub fn game_plugin(app: &mut App) {
         .add_systems(Update, button_highlights)
         .add_systems(Update, take_button_pressed)
         .add_systems(Update, update_hand)
-        .add_systems(Update, select_player_card)
+        .add_systems(Update, handle_drag)
+        .add_systems(Update, select_hand_card)
         .add_systems(Update, select_table_card)
         .add_systems(
             Update,
             update_selected_cards
-                .after(select_player_card)
+                .after(select_hand_card)
                 .after(select_table_card),
         )
+        .add_systems(Update, update_cursor_entity)
         .add_systems(Update, put_button_pressed)
-        .add_systems(Update, mouse_input)
         .add_systems(OnExit(AppState::InGame), despawn_screen::<InGameComponent>);
 }
 
@@ -239,7 +265,9 @@ fn game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         .with_children(|parent| {
             parent.spawn((
                 TableArea,
+                DropIn,
                 HighlightImage,
+                Interaction::None,
                 ImageBundle {
                     style: Style {
                         width: Val::Px(TABLE_WIDTH),
@@ -263,6 +291,28 @@ fn game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             table_slots.add(create_table_slot(parent, 0, 4));
         });
     commands.insert_resource(table_slots);
+
+    // Cursor tracking entity for drag and drop
+    let cursor_entity = CursorEntity::new(
+        commands
+            .spawn((
+                CursorMarker,
+                NodeBundle {
+                    style: Style {
+                        position_type: PositionType::Absolute,
+                        width: Val::Px(1.0),
+                        height: Val::Px(1.0),
+                        align_items: AlignItems::Center,
+                        justify_content: JustifyContent::Center,
+                        ..default()
+                    },
+                    ..default()
+                },
+            ))
+            .id(),
+        Vec2::from_array([0.0, 0.0]),
+    );
+    commands.insert_resource(cursor_entity);
 }
 
 fn create_player_hand_slot(parent: &mut ChildBuilder<'_>, left: Val) -> Entity {
@@ -384,6 +434,8 @@ fn put_button_pressed(
                     card.insert(RemovedCardSelection);
                     card.remove::<PlayerCard>();
                     card.insert(TableCard);
+                    card.remove::<Draggable>();
+                    card.remove::<RelativeCursorPosition>();
                     card.set_parent(slot_id);
                     commands.spawn((
                         SoundEffect,
@@ -441,8 +493,9 @@ fn update_hand(
                         let new_slot_image = commands
                             .spawn((
                                 PlayerCard(card),
-                                Draggable,
                                 CardImage,
+                                Draggable,
+                                RelativeCursorPosition::default(),
                                 Interaction::None,
                                 ImageBundle {
                                     style: Style {
@@ -479,7 +532,7 @@ fn update_hand(
     }
 }
 
-fn select_player_card(
+fn select_hand_card(
     interacted_card_query: Query<(Entity, &Interaction), (Changed<Interaction>, With<PlayerCard>)>,
     selected_card_query: Query<Entity, (With<PlayerCard>, With<SelectedCard>)>,
     mut commands: Commands,
@@ -557,9 +610,51 @@ fn update_selected_cards(
     }
 }
 
-fn mouse_input(
-    mouse_button_input: Res<ButtonInput<MouseButton>>,
+fn handle_drag(
+    mut draggable_query: Query<
+        (Entity, &Parent, &RelativeCursorPosition),
+        (With<Draggable>, Without<Dragged>),
+    >,
+    dragged_query: Query<(Entity, &Dragged), With<Dragged>>,
+    mouse_pressed: Res<ButtonInput<MouseButton>>,
+    mut commands: Commands,
+    cursor_entity: Res<CursorEntity>,
+) {
+    if mouse_pressed.just_pressed(MouseButton::Left) {
+        if let Some((id, parent, _)) = draggable_query.iter_mut().find(|(_, _, c)| c.mouse_over()) {
+            println!("Just pressed on draggable!");
+            commands
+                .entity(id)
+                .insert(Dragged::leaving(parent.get()))
+                .remove_parent_in_place()
+                .set_parent(cursor_entity.entity());
+        }
+    }
+    if mouse_pressed.just_released(MouseButton::Left) {
+        if let Ok((id, dragged)) = dragged_query.get_single() {
+            println!("Released dragged!");
+            commands
+                .entity(id)
+                .set_parent(dragged.return_to())
+                .remove::<Dragged>();
+        }
+    }
+}
+
+fn update_cursor_entity(
+    mut cursor_query: Query<&mut Style, With<CursorMarker>>,
     mut cursor_moved_events: EventReader<CursorMoved>,
+) {
+    for moved in cursor_moved_events.read() {
+        if let Ok(mut cursor_entity_style) = cursor_query.get_single_mut() {
+            cursor_entity_style.left = Val::Px(moved.position.x);
+            cursor_entity_style.top = Val::Px(moved.position.y);
+        }
+    }
+}
+
+fn highlight_on_drag(
+    drop_area_query: Query<(&Interaction, &mut Visibility), (With<DropIn>, With<HighlightImage>)>,
 ) {
     todo!()
 }

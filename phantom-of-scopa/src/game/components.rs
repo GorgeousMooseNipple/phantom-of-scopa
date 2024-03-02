@@ -1,5 +1,5 @@
 use bevy::ecs::component::Component;
-use bevy::ui::AlignSelf;
+use bevy::ecs::entity::Entity;
 use scopa_lib::card::*;
 
 #[derive(Component, Debug)]
@@ -51,10 +51,27 @@ pub struct TableCard;
 pub struct Draggable;
 
 #[derive(Component, Debug)]
-pub struct Dragged;
+pub struct Dragged {
+    previous_parent: Entity,
+}
+
+impl Dragged {
+    pub fn leaving(parent: Entity) -> Self {
+        Self {
+            previous_parent: parent,
+        }
+    }
+
+    pub fn return_to(&self) -> Entity {
+        self.previous_parent
+    }
+}
 
 #[derive(Component, Debug)]
 pub struct DropIn;
+
+#[derive(Component, Debug)]
+pub struct CursorMarker;
 
 #[derive(Debug, Clone, Copy)]
 pub struct UiCard {
