@@ -6,6 +6,7 @@ use bevy::audio::Volume;
 use bevy::prelude::*;
 use bevy::ui::RelativeCursorPosition;
 
+use super::error::{BaseError, Result};
 use super::{despawn_screen, AppState};
 use components::*;
 use popups::*;
@@ -434,22 +435,17 @@ fn put_button_pressed(
     if let Ok(card_id) = player_selected_card.get_single() {
         for interaction in &interaction_query {
             if let Interaction::Pressed = *interaction {
-                if let Some(slot_id) = table_slots.insert() {
-                    let mut card = commands.entity(card_id);
-                    card.remove::<SelectedCard>();
-                    card.insert(RemovedCardSelection);
-                    card.remove::<PlayerCard>();
-                    card.insert(TableCard);
-                    card.remove::<Draggable>();
-                    card.remove::<RelativeCursorPosition>();
-                    card.set_parent(slot_id);
-                    play_audio(asset_server.load("audio/Card_place02.ogg"), &mut commands);
-                } else {
-                    popup_events.send(PopUpEvent {
-                        text: "The table is full".into(),
-                        duration: 2.0,
-                        location: PopUpLocation::Bottom,
-                    });
+                match put_card_on_table(card_id, &mut table_slots, &mut commands) {
+                    Ok(_) => {
+                        play_audio(asset_server.load("audio/Card_place02.ogg"), &mut commands);
+                    }
+                    Err(e) => {
+                        popup_events.send(PopUpEvent {
+                            text: e.into(),
+                            duration: 2.0,
+                            ..default()
+                        });
+                    }
                 }
                 // Remove selection from all selected cards on the table
                 for selected_id in &table_selected_cards {
@@ -459,6 +455,26 @@ fn put_button_pressed(
                 }
             }
         }
+    }
+}
+
+fn put_card_on_table(
+    card_id: Entity,
+    table_slots: &mut ResMut<TableSlots>,
+    commands: &mut Commands,
+) -> Result<()> {
+    let mut card = commands.entity(card_id);
+    if let Some(slot_id) = table_slots.insert() {
+        card.remove::<SelectedCard>();
+        card.insert(RemovedCardSelection);
+        card.remove::<PlayerCard>();
+        card.insert(TableCard);
+        card.remove::<Draggable>();
+        card.remove::<RelativeCursorPosition>();
+        card.set_parent(slot_id);
+        Ok(())
+    } else {
+        Err(BaseError::GameplayError("The table is full".into()))
     }
 }
 
@@ -678,7 +694,7 @@ fn highlight_on_drag(
     mut drop_area_query: Query<&mut Visibility, (With<DropIn>, With<HighlightImage>)>,
 ) {
     // Check if there is a dragged object
-    if dragged_query.get_single().is_ok() {
+    if !dragged_query.is_empty() {
         for interaction in &table_area_interaction {
             match interaction {
                 Interaction::Hovered => {

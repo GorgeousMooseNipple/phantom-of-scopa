@@ -1,3 +1,4 @@
+mod error;
 mod game;
 use bevy::prelude::*;
 use bevy::window::{PresentMode, WindowTheme};
