@@ -673,17 +673,45 @@ fn update_drag_cursor(
 }
 
 fn drop_in(
-    dragged_query: Query<(Entity, &Dragged), With<Dragged>>,
+    dragged_q: Query<(Entity, &Dragged), With<Dragged>>,
+    drop_in_q: Query<&RelativeCursorPosition, (With<DropIn>, With<TableArea>)>,
     mouse_pressed: Res<ButtonInput<MouseButton>>,
+    asset_server: Res<AssetServer>,
+    mut table_slots: ResMut<TableSlots>,
+    mut popup_events: EventWriter<PopUpEvent>,
     mut commands: Commands,
 ) {
-    // We are dragging something
-    if !dragged_query.is_empty() && mouse_pressed.just_released(MouseButton::Left) {
-        if let Ok((id, dragged)) = dragged_query.get_single() {
-            commands
-                .entity(id)
-                .set_parent(dragged.return_to())
-                .remove::<Dragged>();
+    // We are dragging something and releasing left mouse button
+    if !dragged_q.is_empty() && mouse_pressed.just_released(MouseButton::Left) {
+        if let Ok((id, dragged)) = dragged_q.get_single() {
+            if let Ok(drop_in_area) = drop_in_q.get_single() {
+                // We dropped it over drop-in area
+                if drop_in_area.mouse_over() {
+                    match put_card_on_table(id, &mut table_slots, &mut commands) {
+                        Ok(_) => {
+                            commands.entity(id).remove::<Dragged>();
+                            play_audio(asset_server.load("audio/Card_place02.ogg"), &mut commands);
+                        }
+                        Err(e) => {
+                            // The table is full, so return it back to it's original parent
+                            commands
+                                .entity(id)
+                                .set_parent(dragged.return_to())
+                                .remove::<Dragged>();
+                            popup_events.send(PopUpEvent {
+                                text: e.into(),
+                                ..default()
+                            });
+                        }
+                    }
+                } else {
+                    // We dropped it over non drop-in area, so return it back to it's original parent
+                    commands
+                        .entity(id)
+                        .set_parent(dragged.return_to())
+                        .remove::<Dragged>();
+                }
+            }
         }
     }
 }
