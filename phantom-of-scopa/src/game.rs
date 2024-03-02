@@ -124,7 +124,7 @@ pub fn game_plugin(app: &mut App) {
         .add_systems(Update, button_highlights)
         .add_systems(Update, take_button_pressed)
         .add_systems(Update, update_hand)
-        .add_systems(Update, handle_drag)
+        // .add_systems(Update, handle_drag)
         .add_systems(Update, select_hand_card)
         .add_systems(Update, select_table_card)
         .add_systems(
@@ -133,8 +133,10 @@ pub fn game_plugin(app: &mut App) {
                 .after(select_hand_card)
                 .after(select_table_card),
         )
-        // .add_systems(Update, update_cursor_entity)
-        .add_systems(Update, highlight_on_drag.after(handle_drag))
+        .add_systems(Update, drag_start)
+        .add_systems(Update, update_drag_cursor)
+        .add_systems(Update, drop_in)
+        .add_systems(Update, highlight_on_drag)
         .add_systems(Update, put_button_pressed)
         .add_systems(OnExit(AppState::InGame), despawn_screen::<InGameComponent>);
 }
@@ -272,6 +274,7 @@ fn game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 TableArea,
                 DropIn,
                 HighlightImage,
+                RelativeCursorPosition::default(),
                 ImageBundle {
                     style: Style {
                         width: Val::Px(TABLE_WIDTH),
@@ -605,47 +608,66 @@ fn play_audio(asset: Handle<AudioSource>, commands: &mut Commands) {
     ));
 }
 
-fn handle_drag(
+fn drag_start(
     mut draggable_query: Query<
         (Entity, &Parent, &RelativeCursorPosition),
         (With<Draggable>, Without<Dragged>),
     >,
-    dragged_query: Query<(Entity, &Dragged), With<Dragged>>,
-    mut cursor_query: Query<&mut Style, With<CursorMarker>>,
+    dragged_query: Query<&Dragged>,
     mouse_pressed: Res<ButtonInput<MouseButton>>,
     mut cursor_moved_events: EventReader<CursorMoved>,
     mut commands: Commands,
     mut drag_cursor: ResMut<DragCursor>,
 ) {
-    if mouse_pressed.just_pressed(MouseButton::Left) {
-        if let Some((id, _, _)) = draggable_query.iter_mut().find(|(_, _, c)| c.mouse_over()) {
-            drag_cursor.drag_target(id);
+    if dragged_query.is_empty() {
+        if mouse_pressed.just_pressed(MouseButton::Left) {
+            if let Some((id, _, _)) = draggable_query.iter_mut().find(|(_, _, c)| c.mouse_over()) {
+                drag_cursor.drag_target(id);
+            }
+        }
+        if mouse_pressed.just_released(MouseButton::Left) {
+            drag_cursor.take_dragged();
+        }
+        for _ in cursor_moved_events.read() {
+            if let Some(to_drag) = drag_cursor.take_dragged() {
+                if let Ok((_, parent, _)) = draggable_query.get_mut(to_drag) {
+                    commands
+                        .entity(to_drag)
+                        .insert(Dragged::leaving(parent.get()))
+                        .remove::<SelectedCard>()
+                        .insert(RemovedCardSelection)
+                        .remove_parent_in_place()
+                        .set_parent(drag_cursor.entity());
+                }
+            }
         }
     }
-    if mouse_pressed.just_released(MouseButton::Left) {
+}
+
+fn update_drag_cursor(
+    mut drag_cursor_q: Query<&mut Style, With<CursorMarker>>,
+    mut cursor_moved_events: EventReader<CursorMoved>,
+) {
+    for moved in cursor_moved_events.read() {
+        if let Ok(mut cursor_entity_style) = drag_cursor_q.get_single_mut() {
+            cursor_entity_style.left = Val::Px(moved.position.x);
+            cursor_entity_style.top = Val::Px(moved.position.y);
+        }
+    }
+}
+
+fn drop_in(
+    dragged_query: Query<(Entity, &Dragged), With<Dragged>>,
+    mouse_pressed: Res<ButtonInput<MouseButton>>,
+    mut commands: Commands,
+) {
+    // We are dragging something
+    if !dragged_query.is_empty() && mouse_pressed.just_released(MouseButton::Left) {
         if let Ok((id, dragged)) = dragged_query.get_single() {
             commands
                 .entity(id)
                 .set_parent(dragged.return_to())
                 .remove::<Dragged>();
-        }
-        drag_cursor.take_dragged();
-    }
-    for moved in cursor_moved_events.read() {
-        if let Ok(mut cursor_entity_style) = cursor_query.get_single_mut() {
-            cursor_entity_style.left = Val::Px(moved.position.x);
-            cursor_entity_style.top = Val::Px(moved.position.y);
-        }
-        if let Some(to_drag) = drag_cursor.take_dragged() {
-            if let Ok((_, parent, _)) = draggable_query.get_mut(to_drag) {
-                commands
-                    .entity(to_drag)
-                    .insert(Dragged::leaving(parent.get()))
-                    .remove::<SelectedCard>()
-                    .insert(RemovedCardSelection)
-                    .remove_parent_in_place()
-                    .set_parent(drag_cursor.entity());
-            }
         }
     }
 }
