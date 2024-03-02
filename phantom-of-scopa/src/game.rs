@@ -116,7 +116,6 @@ impl DragCursor {
 }
 
 pub fn game_plugin(app: &mut App) {
-    // Add systems to app
     app.add_event::<GameEvent>()
         .add_event::<PopUpEvent>()
         .add_systems(OnEnter(AppState::InGame), game_setup)
@@ -125,7 +124,6 @@ pub fn game_plugin(app: &mut App) {
         .add_systems(Update, button_highlights)
         .add_systems(Update, take_button_pressed)
         .add_systems(Update, update_hand)
-        // .add_systems(Update, handle_drag)
         .add_systems(Update, select_hand_card)
         .add_systems(Update, select_table_card)
         .add_systems(
@@ -214,7 +212,7 @@ fn game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         ..default()
     };
     commands
-        .spawn((take_button, GameButton, TakeButton))
+        .spawn((take_button, GameButton, TakeButton, InGameComponent))
         .with_children(|parent| {
             parent.spawn((
                 ImageBundle {
@@ -240,7 +238,7 @@ fn game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         ..default()
     };
     commands
-        .spawn((put_button, GameButton, PutButton))
+        .spawn((put_button, GameButton, PutButton, InGameComponent))
         .with_children(|parent| {
             parent.spawn((
                 ImageBundle {
@@ -256,6 +254,7 @@ fn game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     let mut table_slots = TableSlots::new(Vec::with_capacity(10));
     commands
         .spawn((
+            InGameComponent,
             TableArea,
             Interaction::None,
             NodeBundle {
@@ -304,6 +303,7 @@ fn game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     let cursor_entity = DragCursor::new(
         commands
             .spawn((
+                InGameComponent,
                 CursorMarker,
                 NodeBundle {
                     style: Style {
