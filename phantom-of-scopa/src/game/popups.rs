@@ -23,6 +23,16 @@ pub struct PopUpEvent {
     pub location: PopUpLocation,
 }
 
+impl Default for PopUpEvent {
+    fn default() -> Self {
+        Self {
+            text: "Pop-up message".into(),
+            duration: 2.0,
+            location: PopUpLocation::default(),
+        }
+    }
+}
+
 pub fn handle_popups(
     popups_query: Query<(Entity, &PopUpMessage)>,
     mut commands: Commands,
