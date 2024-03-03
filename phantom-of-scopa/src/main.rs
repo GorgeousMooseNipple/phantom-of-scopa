@@ -5,12 +5,16 @@ use bevy::window::{PresentMode, WindowTheme};
 
 #[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]
 enum AppState {
+    MainMenu,
     #[default]
     InGame,
+    InGameMenu,
 }
 
 fn main() {
     App::new()
+        .init_state::<AppState>()
+        .add_systems(Startup, setup)
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Phantom of Scopa".into(),
@@ -26,9 +30,7 @@ fn main() {
             }),
             ..default()
         }))
-        .init_state::<AppState>()
         .add_plugins(game::game_plugin)
-        .add_systems(Startup, setup)
         .run();
 }
 

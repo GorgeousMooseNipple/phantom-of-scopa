@@ -1,18 +1,14 @@
-#![allow(clippy::type_complexity)]
-mod components;
-mod popups;
+use super::components::*;
+use super::popups::*;
+use super::resources::*;
+use crate::error::{BaseError, Result};
+use scopa_lib::card::*;
 
 use bevy::audio::Volume;
 use bevy::prelude::*;
 use bevy::ui::RelativeCursorPosition;
-
-use super::error::{BaseError, Result};
-use super::{despawn_screen, AppState};
-use components::*;
-use popups::*;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-use scopa_lib::card::*;
 
 pub const HAND_WIDTH: f32 = 282.0;
 pub const HAND_HEIGHT: f32 = 113.0;
@@ -33,114 +29,11 @@ pub const TABLE_SLOT_WIDTH: f32 = 77.0;
 pub const TABLE_SLOT_HEIGHT: f32 = 111.0;
 
 #[derive(Event)]
-enum GameEvent {
+pub enum GameEvent {
     NewHand(Vec<Card>),
 }
 
-#[derive(Resource)]
-struct SelectedCardImage(Handle<Image>);
-
-struct TableSlotEntity {
-    id: Entity,
-    vacant: bool,
-}
-
-impl TableSlotEntity {
-    fn new(id: Entity) -> Self {
-        Self { id, vacant: true }
-    }
-
-    fn id(&self) -> Entity {
-        self.id
-    }
-
-    fn is_vacant(&self) -> bool {
-        self.vacant
-    }
-
-    fn occupy(&mut self) {
-        self.vacant = false;
-    }
-}
-
-#[derive(Resource)]
-struct TableSlots {
-    pub slots: Vec<TableSlotEntity>,
-}
-
-impl TableSlots {
-    fn new(slots: Vec<TableSlotEntity>) -> Self {
-        Self { slots }
-    }
-
-    fn add(&mut self, entity: Entity) {
-        self.slots.push(TableSlotEntity::new(entity));
-    }
-
-    fn insert(&mut self) -> Option<Entity> {
-        for i in 0..self.slots.len() {
-            if self.slots[i].is_vacant() {
-                self.slots[i].occupy();
-                return Some(self.slots[i].id());
-            }
-        }
-        None
-    }
-}
-
-#[derive(Resource)]
-struct DragCursor {
-    entity: Entity,
-    to_drag: Option<Entity>,
-}
-
-impl DragCursor {
-    fn new(entity: Entity) -> Self {
-        Self {
-            entity,
-            to_drag: None,
-        }
-    }
-
-    pub fn entity(&self) -> Entity {
-        self.entity
-    }
-
-    pub fn drag_target(&mut self, drag_target: Entity) {
-        self.to_drag = Some(drag_target);
-    }
-
-    pub fn take_dragged(&mut self) -> Option<Entity> {
-        self.to_drag.take()
-    }
-}
-
-pub fn game_plugin(app: &mut App) {
-    app.add_event::<GameEvent>()
-        .add_event::<PopUpEvent>()
-        .add_systems(OnEnter(AppState::InGame), game_setup)
-        .add_systems(Update, handle_popups)
-        .add_systems(Update, clear_expired_popups)
-        .add_systems(Update, button_highlights)
-        .add_systems(Update, take_button_pressed)
-        .add_systems(Update, update_hand)
-        .add_systems(Update, select_hand_card)
-        .add_systems(Update, select_table_card)
-        .add_systems(
-            Update,
-            update_selected_cards
-                .after(select_hand_card)
-                .after(select_table_card),
-        )
-        .add_systems(Update, drag_start)
-        .add_systems(Update, update_drag_cursor)
-        .add_systems(Update, drop_in)
-        .add_systems(Update, highlight_on_drag)
-        .add_systems(Update, put_button_pressed)
-        .add_systems(OnExit(AppState::InGame), despawn_screen::<InGameComponent>);
-}
-
-fn game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+pub fn game_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // Insert image of selected card as a resource
     commands.insert_resource(SelectedCardImage(asset_server.load("card_selected.png")));
     // Spawn table background image
@@ -364,7 +257,7 @@ fn create_table_slot(parent: &mut ChildBuilder<'_>, row: usize, column: usize) -
         .id()
 }
 
-fn button_highlights(
+pub fn button_highlights(
     interaction_query: Query<(&Interaction, &Children), (Changed<Interaction>, With<GameButton>)>,
     mut image_query: Query<&mut Visibility, With<HighlightImage>>,
 ) {
@@ -412,7 +305,7 @@ fn random_hand() -> Vec<Card> {
     rand_hand
 }
 
-fn take_button_pressed(
+pub fn take_button_pressed(
     interaction_query: Query<&Interaction, (Changed<Interaction>, With<TakeButton>)>,
     mut game_events: EventWriter<GameEvent>,
 ) {
@@ -423,7 +316,7 @@ fn take_button_pressed(
     }
 }
 
-fn put_button_pressed(
+pub fn put_button_pressed(
     interaction_query: Query<&Interaction, (Changed<Interaction>, With<PutButton>)>,
     player_selected_card: Query<Entity, (With<PlayerCard>, With<SelectedCard>)>,
     table_selected_cards: Query<Entity, (With<TableCard>, With<SelectedCard>)>,
@@ -478,7 +371,7 @@ fn put_card_on_table(
     }
 }
 
-fn update_hand(
+pub fn update_hand(
     mut game_events: EventReader<GameEvent>,
     mut hand_slots_query: Query<(Entity, Option<&Children>), With<PlayerHandSlot>>,
     mut slot_image_query: Query<&mut UiImage, With<PlayerCard>>,
@@ -530,7 +423,7 @@ fn update_hand(
     }
 }
 
-fn select_hand_card(
+pub fn select_hand_card(
     interacted_card_query: Query<(Entity, &Interaction), (Changed<Interaction>, With<PlayerCard>)>,
     selected_card_query: Query<Entity, (With<PlayerCard>, With<SelectedCard>)>,
     mut commands: Commands,
@@ -556,7 +449,7 @@ fn select_hand_card(
     }
 }
 
-fn select_table_card(
+pub fn select_table_card(
     interacted_card_query: Query<(Entity, &Interaction), (Changed<Interaction>, With<TableCard>)>,
     selected_card_query: Query<Entity, (With<TableCard>, With<SelectedCard>)>,
     mut commands: Commands,
@@ -586,7 +479,7 @@ fn create_selected_image(image: Handle<Image>) -> ImageBundle {
     }
 }
 
-fn update_selected_cards(
+pub fn update_selected_cards(
     selected_cards_query: Query<Entity, (With<CardImage>, Added<SelectedCard>)>,
     deselected_cards_query: Query<Entity, (With<CardImage>, With<RemovedCardSelection>)>,
     mut commands: Commands,
@@ -624,7 +517,7 @@ fn play_audio(asset: Handle<AudioSource>, commands: &mut Commands) {
     ));
 }
 
-fn drag_start(
+pub fn drag_start(
     mut draggable_query: Query<
         (Entity, &Parent, &RelativeCursorPosition),
         (With<Draggable>, Without<Dragged>),
@@ -660,7 +553,7 @@ fn drag_start(
     }
 }
 
-fn update_drag_cursor(
+pub fn update_drag_cursor(
     mut drag_cursor_q: Query<&mut Style, With<CursorMarker>>,
     mut cursor_moved_events: EventReader<CursorMoved>,
 ) {
@@ -672,7 +565,7 @@ fn update_drag_cursor(
     }
 }
 
-fn drop_in(
+pub fn drop_in(
     dragged_q: Query<(Entity, &Dragged), With<Dragged>>,
     drop_in_q: Query<&RelativeCursorPosition, (With<DropIn>, With<TableArea>)>,
     mouse_pressed: Res<ButtonInput<MouseButton>>,
@@ -716,7 +609,7 @@ fn drop_in(
     }
 }
 
-fn highlight_on_drag(
+pub fn highlight_on_drag(
     dragged_query: Query<&Dragged>,
     table_area_interaction: Query<&Interaction, (Changed<Interaction>, With<TableArea>)>,
     mut drop_area_query: Query<&mut Visibility, (With<DropIn>, With<HighlightImage>)>,
