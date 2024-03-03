@@ -1,3 +1,4 @@
+use super::constants::{POPUP_BG, TEXT_COLOR};
 use bevy::prelude::*;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -69,7 +70,7 @@ pub fn handle_popups(
                         margin: UiRect::vertical(Val::Px(10.0)),
                         ..default()
                     },
-                    background_color: BackgroundColor(Color::rgba_u8(29, 32, 33, 235)),
+                    background_color: BackgroundColor(POPUP_BG),
                     ..default()
                 },
             ))
@@ -83,7 +84,7 @@ pub fn handle_popups(
                                 style: TextStyle {
                                     font: asset_server.load("fonts/DroidSerif-Regular.ttf"),
                                     font_size: 17.0,
-                                    color: Color::rgba_u8(218, 210, 41, 255),
+                                    color: TEXT_COLOR,
                                 },
                             }],
                             justify: JustifyText::Center,

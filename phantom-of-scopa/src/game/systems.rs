@@ -1,6 +1,8 @@
 use super::components::*;
+use super::constants::*;
 use super::popups::*;
 use super::resources::*;
+use super::InGameState;
 use crate::error::{BaseError, Result};
 use scopa_lib::card::*;
 
@@ -9,24 +11,6 @@ use bevy::prelude::*;
 use bevy::ui::RelativeCursorPosition;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-
-pub const HAND_WIDTH: f32 = 282.0;
-pub const HAND_HEIGHT: f32 = 113.0;
-pub const CARD_WIDTH: f32 = 71.0;
-pub const CARD_HEIGHT: f32 = 110.0;
-pub const HAND_CARDS_SPACING: f32 = 24.0;
-pub const PLAYER_HAND_X: f32 = 260.0;
-pub const PLAYER_HAND_Y: f32 = 366.0;
-pub const CARD_SLOT_WIDTH: f32 = 78.0;
-pub const CARD_SLOT_HEIGHT: f32 = 113.0;
-pub const DEFAULT_VOLUME: f32 = 0.1;
-pub const BORDER_WIDTH: f32 = 4.0;
-pub const TABLE_WIDTH: f32 = 410.0;
-pub const TABLE_HEIGHT: f32 = 234.0;
-pub const TABLE_X: f32 = 196.0;
-pub const TABLE_Y: f32 = 124.0;
-pub const TABLE_SLOT_WIDTH: f32 = 77.0;
-pub const TABLE_SLOT_HEIGHT: f32 = 111.0;
 
 #[derive(Event)]
 pub enum GameEvent {
@@ -645,6 +629,19 @@ pub fn highlight_on_drag(
     } else if let Ok(mut drop_area_visibility) = drop_area_query.get_single_mut() {
         if *drop_area_visibility != Visibility::Hidden {
             *drop_area_visibility = Visibility::Hidden;
+        }
+    }
+}
+
+pub fn toggle_in_game_menu(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    cur_state: Res<State<InGameState>>,
+    mut commands: Commands,
+) {
+    if keyboard_input.just_pressed(KeyCode::Escape) {
+        match cur_state.get() {
+            InGameState::Menu => commands.insert_resource(NextState(Some(InGameState::Playing))),
+            InGameState::Playing => commands.insert_resource(NextState(Some(InGameState::Menu))),
         }
     }
 }
