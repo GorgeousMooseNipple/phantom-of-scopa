@@ -8,7 +8,6 @@ enum AppState {
     MainMenu,
     #[default]
     InGame,
-    InGameMenu,
 }
 
 fn main() {
