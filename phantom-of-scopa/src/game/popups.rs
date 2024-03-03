@@ -1,4 +1,4 @@
-use super::constants::{POPUP_BG, TEXT_COLOR};
+use super::constants::*;
 use bevy::prelude::*;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -82,8 +82,8 @@ pub fn handle_popups(
                             sections: vec![TextSection {
                                 value: event.text.clone(),
                                 style: TextStyle {
-                                    font: asset_server.load("fonts/DroidSerif-Regular.ttf"),
-                                    font_size: 17.0,
+                                    font: asset_server.load(DEFAULT_FONT),
+                                    font_size: DEFAULT_FONT_SIZE,
                                     color: TEXT_COLOR,
                                 },
                             }],
