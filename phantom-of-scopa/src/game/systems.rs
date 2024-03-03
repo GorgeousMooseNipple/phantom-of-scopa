@@ -565,9 +565,11 @@ pub fn update_drag_cursor(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn drop_in(
     dragged_q: Query<(Entity, &Dragged), With<Dragged>>,
     drop_in_q: Query<&RelativeCursorPosition, (With<DropIn>, With<TableArea>)>,
+    table_selected_cards: Query<Entity, (With<TableCard>, With<SelectedCard>)>,
     mouse_pressed: Res<ButtonInput<MouseButton>>,
     asset_server: Res<AssetServer>,
     mut table_slots: ResMut<TableSlots>,
@@ -583,6 +585,12 @@ pub fn drop_in(
                     match put_card_on_table(id, &mut table_slots, &mut commands) {
                         Ok(_) => {
                             commands.entity(id).remove::<Dragged>();
+                            for selected in &table_selected_cards {
+                                commands
+                                    .entity(selected)
+                                    .remove::<SelectedCard>()
+                                    .insert(RemovedCardSelection);
+                            }
                             play_audio(asset_server.load("audio/Card_place02.ogg"), &mut commands);
                         }
                         Err(e) => {
