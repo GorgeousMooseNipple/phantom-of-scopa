@@ -21,6 +21,7 @@ fn main() {
                 present_mode: PresentMode::AutoVsync,
                 prevent_default_event_handling: false,
                 window_theme: Some(WindowTheme::Dark),
+                resizable: false,
                 enabled_buttons: bevy::window::EnabledButtons {
                     maximize: false,
                     ..Default::default()
