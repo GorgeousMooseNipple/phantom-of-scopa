@@ -1,8 +1,8 @@
 use super::components::*;
-use super::popups::*;
 use super::resources::*;
 use super::InGameState;
 use crate::error::{BaseError, Result};
+use crate::popups::*;
 use crate::styles::*;
 use scopa_lib::card::*;
 

@@ -1,7 +1,6 @@
 #![allow(clippy::type_complexity)]
 mod components;
 mod game_menu;
-mod popups;
 mod resources;
 mod systems;
 
@@ -9,7 +8,6 @@ use bevy::prelude::*;
 use components::InGameComponent;
 
 use super::{despawn_screen, AppState};
-use popups::*;
 use systems::*;
 
 #[derive(States, Hash, Debug, PartialEq, Eq, Copy, Clone, Default)]
@@ -41,7 +39,6 @@ pub fn game_plugin(app: &mut App) {
         .init_state::<InGameState>()
         .init_state::<ScopaState>()
         .add_event::<GameEvent>()
-        .add_event::<PopUpEvent>()
         .configure_sets(
             Update,
             (
@@ -53,16 +50,7 @@ pub fn game_plugin(app: &mut App) {
             ),
         )
         .add_systems(OnEnter(AppState::InGame), game_setup)
-        .add_systems(
-            Update,
-            (
-                toggle_in_game_menu,
-                handle_popups,
-                clear_expired_popups,
-                update_hand,
-            )
-                .in_set(InGameSet),
-        )
+        .add_systems(Update, (toggle_in_game_menu, update_hand).in_set(InGameSet))
         .add_systems(
             Update,
             (

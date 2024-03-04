@@ -1,6 +1,6 @@
 use super::components::*;
 use super::InGameMenuState;
-use crate::game::popups::PopUpEvent;
+use crate::popups::PopUpEvent;
 use crate::styles::*;
 use bevy::prelude::*;
 

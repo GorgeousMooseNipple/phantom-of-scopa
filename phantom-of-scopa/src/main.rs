@@ -1,8 +1,10 @@
 mod error;
 mod game;
+mod popups;
 mod styles;
 use bevy::prelude::*;
 use bevy::window::{PresentMode, WindowTheme};
+use popups::*;
 
 #[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]
 enum AppState {
@@ -14,7 +16,9 @@ enum AppState {
 fn main() {
     App::new()
         .init_state::<AppState>()
+        .add_event::<PopUpEvent>()
         .add_systems(Startup, setup)
+        .add_systems(Update, (handle_popups, clear_expired_popups))
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Phantom of Scopa".into(),
