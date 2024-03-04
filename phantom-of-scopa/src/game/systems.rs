@@ -1,7 +1,7 @@
 use super::components::*;
-use super::constants::*;
 use super::popups::*;
 use super::resources::*;
+use super::styles::*;
 use super::InGameState;
 use crate::error::{BaseError, Result};
 use scopa_lib::card::*;
@@ -398,9 +398,9 @@ pub fn update_hand(
                             .id();
                         commands.entity(slot).add_child(new_slot_image);
                     }
-                    // Play hand deal sound
-                    play_audio(asset_server.load("audio/Card_Deal02.ogg"), &mut commands);
                 }
+                // Play hand deal sound
+                play_audio(asset_server.load("audio/Card_Deal02.ogg"), &mut commands);
             }
             _ => {}
         }
@@ -636,12 +636,12 @@ pub fn highlight_on_drag(
 pub fn toggle_in_game_menu(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     cur_state: Res<State<InGameState>>,
-    mut commands: Commands,
+    mut next_state: ResMut<NextState<InGameState>>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Escape) {
         match cur_state.get() {
-            InGameState::Menu => commands.insert_resource(NextState(Some(InGameState::Playing))),
-            InGameState::Playing => commands.insert_resource(NextState(Some(InGameState::Menu))),
+            InGameState::Menu => next_state.set(InGameState::Playing),
+            InGameState::Playing => next_state.set(InGameState::Menu),
         }
     }
 }
