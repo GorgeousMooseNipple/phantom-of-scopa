@@ -9,7 +9,6 @@ pub const PLAYER_HAND_X: f32 = 260.0;
 pub const PLAYER_HAND_Y: f32 = 366.0;
 pub const CARD_SLOT_WIDTH: f32 = 78.0;
 pub const CARD_SLOT_HEIGHT: f32 = 113.0;
-pub const DEFAULT_VOLUME: f32 = 0.1;
 pub const BORDER_WIDTH: f32 = 4.0;
 pub const TABLE_WIDTH: f32 = 410.0;
 pub const TABLE_HEIGHT: f32 = 234.0;
@@ -29,3 +28,5 @@ pub const INTERACTED_UI: Color = Color::rgba(0.65, 0.05, 0.06, 1.0);
 
 pub const DEFAULT_FONT: &str = "fonts/DroidSerif-Regular.ttf";
 pub const DEFAULT_FONT_SIZE: f32 = 17.0;
+
+pub const DEFAULT_VOLUME: f32 = 0.1;
