@@ -207,34 +207,37 @@ fn create_volume_button(
 
 pub fn highlight_volume_buttons(
     mut volume_buttons_q: Query<
-        (&Interaction, Entity, &mut BackgroundColor),
-        (
-            Changed<Interaction>,
-            (With<VolumeSettingsButton>, Without<SelectedVolume>),
-        ),
+        (&Interaction, &mut BackgroundColor, Option<&SelectedVolume>),
+        (Changed<Interaction>, With<VolumeSettingsButton>),
     >,
-    mut selected_q: Query<(Entity, &mut BackgroundColor), With<SelectedVolume>>,
-    mut commands: Commands,
 ) {
-    for (interaction, id, mut bg_color) in &mut volume_buttons_q {
-        match *interaction {
-            Interaction::Pressed => {
-                *bg_color = SELECTED_UI.into();
-                if let Ok((prev_selected, mut prev_bg)) = selected_q.get_single_mut() {
-                    commands.entity(prev_selected).remove::<SelectedVolume>();
-                    *prev_bg = INACTIVE_UI.into();
-                }
-                commands.entity(id).insert(SelectedVolume);
-            }
-            Interaction::Hovered => *bg_color = HOVERED_INACTIVE_UI.into(),
-            Interaction::None => *bg_color = INACTIVE_UI.into(),
+    for (interaction, mut bg_color, selected) in &mut volume_buttons_q {
+        match (*interaction, selected) {
+            (Interaction::Hovered, Some(_)) => *bg_color = HOVERED_SELECTED_UI.into(),
+            (Interaction::Hovered, None) => *bg_color = HOVERED_INACTIVE_UI.into(),
+            (Interaction::None, Some(_)) => *bg_color = SELECTED_UI.into(),
+            (Interaction::None, None) => *bg_color = INACTIVE_UI.into(),
+            (Interaction::Pressed, _) => {}
         }
     }
 }
 
-pub fn selected_volume_button(mut selected_q: Query<&mut BackgroundColor, With<SelectedVolume>>) {
-    if let Ok(mut selected_bg) = selected_q.get_single_mut() {
-        *selected_bg = SELECTED_UI.into();
+pub fn selected_volume_button(
+    interaction_q: Query<
+        (&Interaction, Entity),
+        (Changed<Interaction>, With<VolumeSettingsButton>),
+    >,
+    mut selected_q: Query<(Entity, &mut BackgroundColor), With<SelectedVolume>>,
+    mut commands: Commands,
+) {
+    for (interaction, id) in &interaction_q {
+        if *interaction == Interaction::Pressed {
+            if let Ok((prev_id, mut prev_bg)) = selected_q.get_single_mut() {
+                *prev_bg = INACTIVE_UI.into();
+                commands.entity(prev_id).remove::<SelectedVolume>();
+            }
+            commands.entity(id).insert(SelectedVolume);
+        }
     }
 }
 
