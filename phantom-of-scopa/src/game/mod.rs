@@ -3,7 +3,6 @@ mod components;
 mod game_menu;
 mod popups;
 mod resources;
-mod styles;
 mod systems;
 
 use bevy::prelude::*;

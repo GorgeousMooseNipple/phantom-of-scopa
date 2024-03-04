@@ -1,7 +1,7 @@
 use super::components::*;
 use super::InGameMenuState;
 use crate::game::popups::PopUpEvent;
-use crate::game::styles::*;
+use crate::styles::*;
 use bevy::prelude::*;
 
 pub fn setup_menu(mut commands: Commands, mut next_state: ResMut<NextState<InGameMenuState>>) {
@@ -20,7 +20,7 @@ pub fn setup_menu(mut commands: Commands, mut next_state: ResMut<NextState<InGam
                 justify_content: JustifyContent::Center,
                 ..default()
             },
-            background_color: MENU_BG.with_a(0.95).into(),
+            background_color: DEFAULT_BG.with_a(0.95).into(),
             ..default()
         },
     ));
@@ -96,8 +96,8 @@ pub fn highlight_buttons(
 ) {
     for (mut border_color, interaction) in &mut buttons_q {
         match *interaction {
-            Interaction::Hovered => *border_color = ACTIVE_UI.into(),
-            Interaction::Pressed => *border_color = INTERACTED_UI.into(),
+            Interaction::Hovered => *border_color = HOVERED_UI.into(),
+            Interaction::Pressed => *border_color = SELECTED_UI.into(),
             Interaction::None => *border_color = INACTIVE_UI.into(),
         }
     }
@@ -219,14 +219,14 @@ pub fn highlight_volume_buttons(
     for (interaction, id, mut bg_color) in &mut volume_buttons_q {
         match *interaction {
             Interaction::Pressed => {
-                *bg_color = INTERACTED_UI.into();
+                *bg_color = SELECTED_UI.into();
                 if let Ok((prev_selected, mut prev_bg)) = selected_q.get_single_mut() {
                     commands.entity(prev_selected).remove::<SelectedVolume>();
                     *prev_bg = INACTIVE_UI.into();
                 }
                 commands.entity(id).insert(SelectedVolume);
             }
-            Interaction::Hovered => *bg_color = ACTIVE_UI.into(),
+            Interaction::Hovered => *bg_color = HOVERED_INACTIVE_UI.into(),
             Interaction::None => *bg_color = INACTIVE_UI.into(),
         }
     }
@@ -234,7 +234,7 @@ pub fn highlight_volume_buttons(
 
 pub fn selected_volume_button(mut selected_q: Query<&mut BackgroundColor, With<SelectedVolume>>) {
     if let Ok(mut selected_bg) = selected_q.get_single_mut() {
-        *selected_bg = INTERACTED_UI.into();
+        *selected_bg = SELECTED_UI.into();
     }
 }
 

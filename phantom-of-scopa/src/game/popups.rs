@@ -1,4 +1,4 @@
-use super::styles::*;
+use crate::styles::*;
 use bevy::prelude::*;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -70,7 +70,7 @@ pub fn handle_popups(
                         margin: UiRect::vertical(Val::Px(10.0)),
                         ..default()
                     },
-                    background_color: BackgroundColor(MENU_BG),
+                    background_color: BackgroundColor(DEFAULT_BG),
                     ..default()
                 },
             ))

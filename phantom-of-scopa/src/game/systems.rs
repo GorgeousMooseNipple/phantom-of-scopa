@@ -1,9 +1,9 @@
 use super::components::*;
 use super::popups::*;
 use super::resources::*;
-use super::styles::*;
 use super::InGameState;
 use crate::error::{BaseError, Result};
+use crate::styles::*;
 use scopa_lib::card::*;
 
 use bevy::audio::Volume;
@@ -219,8 +219,8 @@ fn create_player_hand_slot(parent: &mut ChildBuilder<'_>, left: Val) -> Entity {
 }
 
 fn create_table_slot(parent: &mut ChildBuilder<'_>, row: usize, column: usize) -> Entity {
-    let x_offset = BORDER_WIDTH + (TABLE_SLOT_WIDTH + BORDER_WIDTH) * column as f32;
-    let y_offset = BORDER_WIDTH + (TABLE_SLOT_HEIGHT + BORDER_WIDTH) * row as f32;
+    let x_offset = IN_GAME_BORDER_WIDTH + (TABLE_SLOT_WIDTH + IN_GAME_BORDER_WIDTH) * column as f32;
+    let y_offset = IN_GAME_BORDER_WIDTH + (TABLE_SLOT_HEIGHT + IN_GAME_BORDER_WIDTH) * row as f32;
     parent
         .spawn((
             TableSlot,
