@@ -1,7 +1,28 @@
-use bevy::prelude::Component;
+use bevy::prelude::{Color, Component};
 
 #[derive(Component, Debug)]
 pub struct InGameMenuUI;
 
 #[derive(Component, Debug)]
-pub struct InGameMenuButton;
+pub struct InGameMenuRootNode;
+
+#[derive(Component, Debug)]
+pub struct RootInGameMenuUI;
+
+#[derive(Component, Debug)]
+pub struct SettingsUi;
+
+#[derive(Component, Debug)]
+pub struct VolumeSettingsButton(pub usize);
+
+#[derive(Component, Debug)]
+pub struct SettingsButton;
+
+#[derive(Component, Debug)]
+pub struct SelectedVolume;
+
+#[derive(Component, Debug)]
+pub struct ExitButton;
+
+#[derive(Component, Debug)]
+pub struct BackToRootButton;

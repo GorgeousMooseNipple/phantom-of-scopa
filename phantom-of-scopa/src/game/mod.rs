@@ -1,9 +1,9 @@
 #![allow(clippy::type_complexity)]
 mod components;
-mod constants;
 mod game_menu;
 mod popups;
 mod resources;
+mod styles;
 mod systems;
 
 use bevy::prelude::*;
