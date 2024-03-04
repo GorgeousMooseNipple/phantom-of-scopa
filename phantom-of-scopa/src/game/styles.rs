@@ -30,3 +30,32 @@ pub const DEFAULT_FONT: &str = "fonts/DroidSerif-Regular.ttf";
 pub const DEFAULT_FONT_SIZE: f32 = 17.0;
 
 pub const DEFAULT_VOLUME: f32 = 0.1;
+
+pub fn default_text_style(asset_server: &Res<AssetServer>) -> TextStyle {
+    TextStyle {
+        font: asset_server.load(DEFAULT_FONT),
+        font_size: DEFAULT_FONT_SIZE,
+        color: TEXT_COLOR,
+    }
+}
+
+pub fn default_text(text: &str, asset_server: &Res<AssetServer>) -> Text {
+    Text::from_section(text, default_text_style(asset_server))
+}
+
+pub fn default_button() -> ButtonBundle {
+    ButtonBundle {
+        style: Style {
+            width: Val::Px(BUTTON_WIDTH),
+            height: Val::Px(BUTTON_HEIGHT),
+            border: UiRect::all(Val::Px(2.0)),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            margin: UiRect::all(Val::Px(4.0)),
+            ..default()
+        },
+        background_color: MENU_BG.into(),
+        border_color: INACTIVE_UI.into(),
+        ..default()
+    }
+}
