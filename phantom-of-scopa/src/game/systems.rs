@@ -318,7 +318,7 @@ pub fn put_button_pressed(
                     }
                     Err(e) => {
                         popup_events.send(PopUpEvent {
-                            text: e.into(),
+                            text: e.to_string(),
                             duration: 2.0,
                             ..default()
                         });
@@ -351,7 +351,7 @@ fn put_card_on_table(
         card.set_parent(slot_id);
         Ok(())
     } else {
-        Err(BaseError::GameplayError("The table is full".into()))
+        Err(BaseError::Gameplay("The table is full".into()))
     }
 }
 
@@ -584,7 +584,7 @@ pub fn drop_in(
                                 .set_parent(dragged.return_to())
                                 .remove::<Dragged>();
                             popup_events.send(PopUpEvent {
-                                text: e.into(),
+                                text: e.to_string(),
                                 ..default()
                             });
                         }
