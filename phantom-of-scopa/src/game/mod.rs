@@ -11,7 +11,7 @@ use super::{despawn_screen, AppState};
 use systems::*;
 
 #[derive(States, Hash, Debug, PartialEq, Eq, Copy, Clone, Default)]
-enum InGameState {
+enum GameState {
     Menu,
     #[default]
     Playing,
@@ -36,7 +36,7 @@ struct PlayerSet;
 
 pub fn game_plugin(app: &mut App) {
     app.add_plugins(game_menu::game_menu_plugin)
-        .init_state::<InGameState>()
+        .init_state::<GameState>()
         .init_state::<ScopaState>()
         .add_event::<GameEvent>()
         .configure_sets(
@@ -44,7 +44,7 @@ pub fn game_plugin(app: &mut App) {
             (
                 InGameSet.run_if(in_state(AppState::InGame)),
                 PlayerSet.in_set(InGameSet).run_if(
-                    in_state(InGameState::Playing).and_then(in_state(ScopaState::PlayerTurn)),
+                    in_state(GameState::Playing).and_then(in_state(ScopaState::PlayerTurn)),
                 ),
                 DragAndDrop.in_set(PlayerSet),
             ),

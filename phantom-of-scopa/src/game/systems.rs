@@ -1,6 +1,6 @@
 use super::components::*;
 use super::resources::*;
-use super::InGameState;
+use super::GameState;
 use crate::config::Config;
 use crate::error::{BaseError, Result};
 use crate::popups::*;
@@ -651,13 +651,13 @@ pub fn highlight_on_drag(
 
 pub fn toggle_in_game_menu(
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    cur_state: Res<State<InGameState>>,
-    mut next_state: ResMut<NextState<InGameState>>,
+    cur_state: Res<State<GameState>>,
+    mut next_state: ResMut<NextState<GameState>>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Escape) {
         match cur_state.get() {
-            InGameState::Menu => next_state.set(InGameState::Playing),
-            InGameState::Playing => next_state.set(InGameState::Menu),
+            GameState::Menu => next_state.set(GameState::Playing),
+            GameState::Playing => next_state.set(GameState::Menu),
         }
     }
 }

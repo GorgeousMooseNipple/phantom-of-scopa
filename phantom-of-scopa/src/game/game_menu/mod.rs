@@ -1,7 +1,7 @@
 mod components;
 mod systems;
 
-use crate::game::InGameState;
+use crate::game::GameState;
 use crate::AppState;
 use bevy::prelude::*;
 use systems::*;
@@ -29,7 +29,7 @@ pub fn game_menu_plugin(app: &mut App) {
             Update,
             (
                 InGameMenuSet
-                    .run_if(in_state(AppState::InGame).and_then(in_state(InGameState::Menu))),
+                    .run_if(in_state(AppState::InGame).and_then(in_state(GameState::Menu))),
                 RootInGameMenuSet
                     .in_set(InGameMenuSet)
                     .run_if(in_state(InGameMenuState::Root)),
@@ -38,7 +38,7 @@ pub fn game_menu_plugin(app: &mut App) {
                     .run_if(in_state(InGameMenuState::Settings)),
             ),
         )
-        .add_systems(OnEnter(InGameState::Menu), setup_menu)
+        .add_systems(OnEnter(GameState::Menu), setup_menu)
         .add_systems(OnEnter(InGameMenuState::Root), create_root_in_game_menu)
         .add_systems(
             OnEnter(InGameMenuState::Settings),
@@ -57,5 +57,6 @@ pub fn game_menu_plugin(app: &mut App) {
         )
         .add_systems(OnExit(InGameMenuState::Settings), despawn_submenu)
         .add_systems(OnExit(InGameMenuState::Root), despawn_submenu)
-        .add_systems(OnExit(InGameState::Menu), close_menu);
+        .add_systems(OnExit(GameState::Menu), close_menu)
+        .add_systems(OnExit(AppState::InGame), close_menu);
 }

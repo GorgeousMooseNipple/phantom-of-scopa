@@ -1,7 +1,7 @@
 use super::components::*;
 use super::InGameMenuState;
 use crate::config::Config;
-use crate::game::InGameState;
+use crate::game::GameState;
 use crate::popups::PopUpEvent;
 use crate::styles::*;
 use crate::AppState;
@@ -107,12 +107,10 @@ pub fn open_settings(
 pub fn main_menu(
     main_menu_button_q: Query<&Interaction, (Changed<Interaction>, With<MainMenuButton>)>,
     mut app_state: ResMut<NextState<AppState>>,
-    mut in_game_menu_state: ResMut<NextState<InGameMenuState>>,
-    mut in_game_state: ResMut<NextState<InGameState>>,
+    mut game_state: ResMut<NextState<GameState>>,
 ) {
     if let Ok(Interaction::Pressed) = main_menu_button_q.get_single() {
-        in_game_menu_state.set(InGameMenuState::Closed);
-        in_game_state.set(InGameState::Playing);
+        game_state.set(GameState::Playing);
         app_state.set(AppState::MainMenu);
     }
 }
