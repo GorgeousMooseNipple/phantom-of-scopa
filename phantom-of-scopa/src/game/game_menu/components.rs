@@ -22,7 +22,7 @@ pub struct SettingsButton;
 pub struct SelectedVolume;
 
 #[derive(Component, Debug)]
-pub struct ExitButton;
+pub struct MainMenuButton;
 
 #[derive(Component, Debug)]
 pub struct BackToRootButton;

@@ -1,8 +1,10 @@
 use super::components::*;
 use super::InGameMenuState;
 use crate::config::Config;
+use crate::game::InGameState;
 use crate::popups::PopUpEvent;
 use crate::styles::*;
+use crate::AppState;
 use bevy::prelude::*;
 
 pub fn setup_menu(mut commands: Commands, mut next_state: ResMut<NextState<InGameMenuState>>) {
@@ -62,14 +64,18 @@ pub fn create_root_in_game_menu(
                     ));
                 });
             parent
-                .spawn((InGameMenuUI, RootInGameMenuUI, default_button()))
+                .spawn((
+                    InGameMenuUI,
+                    RootInGameMenuUI,
+                    MainMenuButton,
+                    default_button(),
+                ))
                 .with_children(|button| {
                     button.spawn((
                         InGameMenuUI,
                         RootInGameMenuUI,
-                        ExitButton,
                         TextBundle {
-                            text: default_text("Exit", &asset_server),
+                            text: default_text("Main menu", &asset_server),
                             ..default()
                         },
                     ));
@@ -90,14 +96,24 @@ pub fn despawn_submenu(root_q: Query<Entity, With<InGameMenuRootNode>>, mut comm
 }
 
 pub fn open_settings(
-    settings_button_q: Query<
-        &Interaction,
-        (Changed<Interaction>, (With<Button>, With<SettingsButton>)),
-    >,
+    settings_button_q: Query<&Interaction, (Changed<Interaction>, With<SettingsButton>)>,
     mut next_state: ResMut<NextState<InGameMenuState>>,
 ) {
     if let Ok(Interaction::Pressed) = settings_button_q.get_single() {
         next_state.set(InGameMenuState::Settings);
+    }
+}
+
+pub fn main_menu(
+    main_menu_button_q: Query<&Interaction, (Changed<Interaction>, With<MainMenuButton>)>,
+    mut app_state: ResMut<NextState<AppState>>,
+    mut in_game_menu_state: ResMut<NextState<InGameMenuState>>,
+    mut in_game_state: ResMut<NextState<InGameState>>,
+) {
+    if let Ok(Interaction::Pressed) = main_menu_button_q.get_single() {
+        in_game_menu_state.set(InGameMenuState::Closed);
+        in_game_state.set(InGameState::Playing);
+        app_state.set(AppState::MainMenu);
     }
 }
 
