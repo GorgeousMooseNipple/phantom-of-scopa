@@ -142,13 +142,7 @@ pub fn connect_button(
     //             todo!("Connected successfully, so change state to AppState::InGame");
     //         }
     //         Err(e) => {
-    //             popup_events.send(PopUpEvent {
-    //                 text: e.to_string(),
-    //                 duration: 15.0,
-    //                 location: PopUpLocation::Center,
-    //                 height: Val::Percent(40.0),
-    //                 ..default()
-    //             });
+    //             popup_events.send(error_popup(e.to_string()));
     //         }
     //     }
     // }
@@ -164,13 +158,7 @@ pub fn handle_connection_input(
                 todo!("Connected successfully, so change state to AppState::InGame");
             }
             Err(e) => {
-                popup_events.send(PopUpEvent {
-                    text: e.to_string(),
-                    duration: 15.0,
-                    location: PopUpLocation::Center,
-                    height: Val::Percent(40.0),
-                    ..default()
-                });
+                popup_events.send(error_popup(e.to_string()));
             }
         }
     }

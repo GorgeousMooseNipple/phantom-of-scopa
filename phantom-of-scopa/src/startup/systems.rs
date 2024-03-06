@@ -128,13 +128,7 @@ pub fn setup_startup(
                 .set_parent(root);
         }
         Err(e) => {
-            popup_event.send(PopUpEvent {
-                text: e.to_string(),
-                duration: 15.0,
-                location: PopUpLocation::Center,
-                height: Val::Percent(40.0),
-                ..default()
-            });
+            popup_event.send(error_popup(e.to_string()));
         }
     }
 }
@@ -170,13 +164,7 @@ pub fn handle_username_input(
                 app_state.set(AppState::MainMenu);
             }
             Err(e) => {
-                popup_event.send(PopUpEvent {
-                    text: e.to_string(),
-                    duration: 15.0,
-                    location: PopUpLocation::Center,
-                    height: Val::Percent(40.0),
-                    ..default()
-                });
+                popup_event.send(error_popup(e.to_string()));
             }
         }
     }
