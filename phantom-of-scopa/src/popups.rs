@@ -6,6 +6,7 @@ pub enum PopUpLocation {
     Top,
     #[default]
     Bottom,
+    Center,
 }
 
 #[derive(Component, Debug)]
@@ -22,6 +23,8 @@ pub struct PopUpEvent {
     pub text: String,
     pub duration: f64,
     pub location: PopUpLocation,
+    pub width: Val,
+    pub height: Val,
 }
 
 impl Default for PopUpEvent {
@@ -30,6 +33,8 @@ impl Default for PopUpEvent {
             text: "Pop-up message".into(),
             duration: 2.0,
             location: PopUpLocation::default(),
+            width: Val::Percent(60.0),
+            height: Val::Percent(15.0),
         }
     }
 }
@@ -51,6 +56,7 @@ pub fn handle_popups(
         let align_popup = match event.location {
             PopUpLocation::Top => AlignSelf::Start,
             PopUpLocation::Bottom => AlignSelf::End,
+            PopUpLocation::Center => AlignSelf::Center,
         };
         commands
             .spawn((
@@ -65,8 +71,8 @@ pub fn handle_popups(
                         justify_self: JustifySelf::Center,
                         align_items: AlignItems::Center,
                         justify_content: JustifyContent::Center,
-                        width: Val::Percent(60.0),
-                        height: Val::Percent(15.0),
+                        width: event.width,
+                        height: event.height,
                         margin: UiRect::vertical(Val::Px(10.0)),
                         ..default()
                     },

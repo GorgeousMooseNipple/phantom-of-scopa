@@ -88,21 +88,6 @@ pub fn despawn_submenu(root_q: Query<Entity, With<InGameMenuRootNode>>, mut comm
     }
 }
 
-pub fn highlight_buttons(
-    mut buttons_q: Query<
-        (&mut BorderColor, &Interaction),
-        (Changed<Interaction>, (With<Button>, With<InGameMenuUI>)),
-    >,
-) {
-    for (mut border_color, interaction) in &mut buttons_q {
-        match *interaction {
-            Interaction::Hovered => *border_color = HOVERED_UI.into(),
-            Interaction::Pressed => *border_color = SELECTED_UI.into(),
-            Interaction::None => *border_color = INACTIVE_UI.into(),
-        }
-    }
-}
-
 pub fn open_settings(
     settings_button_q: Query<
         &Interaction,

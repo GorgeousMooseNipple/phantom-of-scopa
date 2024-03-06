@@ -30,6 +30,8 @@ pub const HOVERED_SELECTED_UI: Color = Color::rgba(0.77, 0.74, 0.10, 1.0);
 
 pub const DEFAULT_FONT: &str = "fonts/DroidSerif-Regular.ttf";
 pub const DEFAULT_FONT_SIZE: f32 = 17.0;
+pub const INPUT_FONT_SIZE: f32 = 20.0;
+pub const TITLE_FONT_SIZE: f32 = 24.0;
 
 pub const DEFAULT_VOLUME: f32 = 0.1;
 
@@ -43,6 +45,20 @@ pub fn default_text_style(asset_server: &Res<AssetServer>) -> TextStyle {
 
 pub fn default_text(text: &str, asset_server: &Res<AssetServer>) -> Text {
     Text::from_section(text, default_text_style(asset_server))
+}
+
+pub fn game_title(asset_server: &Res<AssetServer>) -> TextBundle {
+    TextBundle {
+        text: Text::from_section(
+            "PHANTOM OF SCOPA",
+            TextStyle {
+                font: asset_server.load(DEFAULT_FONT),
+                font_size: TITLE_FONT_SIZE,
+                color: TEXT_COLOR,
+            },
+        ),
+        ..default()
+    }
 }
 
 pub fn default_button() -> ButtonBundle {
