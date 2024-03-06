@@ -3,3 +3,4 @@ assets
 .cargo
 run
 *.log
+config.toml
