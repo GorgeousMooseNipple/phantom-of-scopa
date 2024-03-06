@@ -1,4 +1,4 @@
-use bevy::prelude::{Color, Component};
+use bevy::prelude::Component;
 
 #[derive(Component, Debug)]
 pub struct InGameMenuUI;

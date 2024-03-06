@@ -1,3 +1,5 @@
+use crate::popups::{PopUpEvent, PopUpLocation};
+
 use bevy::prelude::*;
 
 pub const HAND_WIDTH: f32 = 282.0;
@@ -74,6 +76,16 @@ pub fn default_button() -> ButtonBundle {
         },
         background_color: DEFAULT_BG.into(),
         border_color: INACTIVE_UI.into(),
+        ..default()
+    }
+}
+
+pub fn error_popup(msg: String) -> PopUpEvent {
+    PopUpEvent {
+        text: msg,
+        duration: 15.0,
+        location: PopUpLocation::Center,
+        height: Val::Percent(40.0),
         ..default()
     }
 }

@@ -1,5 +1,6 @@
 use super::components::*;
 use super::InGameMenuState;
+use crate::config::Config;
 use crate::popups::PopUpEvent;
 use crate::styles::*;
 use bevy::prelude::*;
@@ -105,8 +106,9 @@ pub fn create_settings_in_game_menu(
     mut popup_events: EventWriter<PopUpEvent>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
+    config: Res<Config>,
 ) {
-    let cur_volume = 5;
+    let cur_volume = config.volume_level();
     if let Ok(root) = root_q.get_single() {
         commands.entity(root).with_children(|parent| {
             parent.spawn((
@@ -209,19 +211,25 @@ pub fn highlight_volume_buttons(
 
 pub fn selected_volume_button(
     interaction_q: Query<
-        (&Interaction, Entity),
+        (&Interaction, Entity, &VolumeSettingsButton),
         (Changed<Interaction>, With<VolumeSettingsButton>),
     >,
     mut selected_q: Query<(Entity, &mut BackgroundColor), With<SelectedVolume>>,
     mut commands: Commands,
+    mut config: ResMut<Config>,
+    mut popup_events: EventWriter<PopUpEvent>,
 ) {
-    for (interaction, id) in &interaction_q {
+    for (interaction, id, volume) in &interaction_q {
         if *interaction == Interaction::Pressed {
             if let Ok((prev_id, mut prev_bg)) = selected_q.get_single_mut() {
                 *prev_bg = INACTIVE_UI.into();
                 commands.entity(prev_id).remove::<SelectedVolume>();
             }
             commands.entity(id).insert(SelectedVolume);
+            config.set_volume_level(volume.0);
+            if let Err(e) = config.save() {
+                popup_events.send(error_popup(e.to_string()));
+            }
         }
     }
 }

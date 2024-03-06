@@ -1,5 +1,9 @@
+use crate::error::Result;
+
 use bevy::ecs::system::Resource;
 use serde::{Deserialize, Serialize};
+use std::fs::File;
+use std::io::Write;
 
 pub const CONFIG_PATH: &str = "config.toml";
 pub const MIN_VOLUME: f32 = 0.04;
@@ -53,6 +57,10 @@ impl Config {
         }
     }
 
+    pub fn volume_level(&self) -> usize {
+        self.settings.volume
+    }
+
     pub fn volume_as_f32(&self) -> f32 {
         f32::min(
             MAX_VOLUME,
@@ -62,5 +70,12 @@ impl Config {
 
     pub fn set_volume_level(&mut self, volume_level: usize) {
         self.settings.volume = volume_level
+    }
+
+    pub fn save(&self) -> Result<()> {
+        let mut file = File::create(CONFIG_PATH)?;
+        let config_string = toml::to_string(self)?;
+        file.write_all(config_string.as_bytes())?;
+        Ok(())
     }
 }
