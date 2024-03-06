@@ -1,6 +1,7 @@
 use super::components::*;
 use super::resources::*;
 use super::InGameState;
+use crate::config::Config;
 use crate::error::{BaseError, Result};
 use crate::popups::*;
 use crate::styles::*;
@@ -305,6 +306,7 @@ pub fn put_button_pressed(
     player_selected_card: Query<Entity, (With<PlayerCard>, With<SelectedCard>)>,
     table_selected_cards: Query<Entity, (With<TableCard>, With<SelectedCard>)>,
     asset_server: Res<AssetServer>,
+    config: Res<Config>,
     mut popup_events: EventWriter<PopUpEvent>,
     mut table_slots: ResMut<TableSlots>,
     mut commands: Commands,
@@ -314,7 +316,11 @@ pub fn put_button_pressed(
             if let Interaction::Pressed = *interaction {
                 match put_card_on_table(card_id, &mut table_slots, &mut commands) {
                     Ok(_) => {
-                        play_audio(asset_server.load("audio/Card_place02.ogg"), &mut commands);
+                        play_audio(
+                            asset_server.load("audio/Card_place02.ogg"),
+                            config.volume_as_f32(),
+                            &mut commands,
+                        );
                     }
                     Err(e) => {
                         popup_events.send(PopUpEvent {
@@ -361,6 +367,7 @@ pub fn update_hand(
     mut slot_image_query: Query<&mut UiImage, With<PlayerCard>>,
     asset_server: Res<AssetServer>,
     mut commands: Commands,
+    config: Res<Config>,
 ) {
     for event in game_events.read() {
         #[allow(clippy::single_match)]
@@ -400,7 +407,11 @@ pub fn update_hand(
                     }
                 }
                 // Play hand deal sound
-                play_audio(asset_server.load("audio/Card_Deal02.ogg"), &mut commands);
+                play_audio(
+                    asset_server.load("audio/Card_Deal02.ogg"),
+                    config.volume_as_f32(),
+                    &mut commands,
+                );
             }
             _ => {}
         }
@@ -485,14 +496,14 @@ pub fn update_selected_cards(
     }
 }
 
-fn play_audio(asset: Handle<AudioSource>, commands: &mut Commands) {
+fn play_audio(asset: Handle<AudioSource>, volume: f32, commands: &mut Commands) {
     commands.spawn((
         SoundEffect,
         AudioBundle {
             source: asset,
             settings: PlaybackSettings {
                 mode: bevy::audio::PlaybackMode::Once,
-                volume: Volume::new(DEFAULT_VOLUME),
+                volume: Volume::new(volume),
                 paused: false,
                 spatial: false,
                 ..default()
@@ -556,6 +567,7 @@ pub fn drop_in(
     table_selected_cards: Query<Entity, (With<TableCard>, With<SelectedCard>)>,
     mouse_pressed: Res<ButtonInput<MouseButton>>,
     asset_server: Res<AssetServer>,
+    config: Res<Config>,
     mut table_slots: ResMut<TableSlots>,
     mut popup_events: EventWriter<PopUpEvent>,
     mut commands: Commands,
@@ -575,7 +587,11 @@ pub fn drop_in(
                                     .remove::<SelectedCard>()
                                     .insert(RemovedCardSelection);
                             }
-                            play_audio(asset_server.load("audio/Card_place02.ogg"), &mut commands);
+                            play_audio(
+                                asset_server.load("audio/Card_place02.ogg"),
+                                config.volume_as_f32(),
+                                &mut commands,
+                            );
                         }
                         Err(e) => {
                             // The table is full, so return it back to it's original parent
