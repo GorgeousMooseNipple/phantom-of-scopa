@@ -3613,6 +3613,10 @@ dependencies = [
 [[package]]
 name = "scopa-lib"
 version = "0.1.0"
+dependencies = [
+ "rand",
+ "serde",
+]
 
 [[package]]
 name = "scopeguard"
