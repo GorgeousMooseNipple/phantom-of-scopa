@@ -2,6 +2,7 @@ pub mod card;
 
 use card::*;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 pub type PlayerId = u64;
 
@@ -57,7 +58,6 @@ impl TakenCards {
 
 #[derive(Debug)]
 pub struct Player {
-    id: PlayerId,
     name: String,
     points: u8,
     scopas: u8,
@@ -66,9 +66,8 @@ pub struct Player {
 }
 
 impl Player {
-    fn new(id: PlayerId, name: &str) -> Self {
+    fn new(name: &str) -> Self {
         Self {
-            id,
             name: name.into(),
             points: 0,
             scopas: 0,
@@ -143,28 +142,50 @@ pub enum GameEvent {
 
 #[derive(Debug)]
 pub struct ScopaGame {
-    players: Vec<Player>,
+    players: HashMap<PlayerId, Player>,
     deck: Deck,
     table: Table,
     active_player: PlayerId,
-    took_last: usize,
+    took_last: PlayerId,
 }
 
 impl Default for ScopaGame {
     fn default() -> Self {
         Self {
-            players: Vec::with_capacity(2),
+            players: HashMap::with_capacity(2),
             deck: Deck::default(),
             table: Table::default(),
-            active_player: u64::default(),
-            took_last: usize::default(),
+            active_player: PlayerId::default(),
+            took_last: PlayerId::default(),
         }
     }
 }
 
 impl ScopaGame {
     fn validate(&self, event: &GameEvent) -> bool {
-        unimplemented!();
+        match event {
+            GameEvent::PlayerConnected { id, .. } => {
+                // Player with that id is already connected
+                if self.players.contains_key(id) {
+                    return false;
+                }
+            }
+            GameEvent::PlayerDisconnected { id, .. } => {
+                // No player with that id is connected
+                if !self.players.contains_key(id) {
+                    return false;
+                }
+            }
+            GameEvent::StartRound { active_player } => {
+                if !self.players.contains_key(active_player) {
+                    return false;
+                }
+            }
+            _ => {
+                unimplemented!()
+            }
+        }
+        true
     }
 
     fn consume(&mut self, event: &GameEvent) {
@@ -177,7 +198,7 @@ mod tests {
     use super::*;
 
     fn player_with_cards() -> Player {
-        let mut p = Player::new(0, "test");
+        let mut p = Player::new("test");
         p.take_cards(vec![
             Card {
                 suite: Suite::Coins,
