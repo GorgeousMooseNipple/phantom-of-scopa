@@ -36,6 +36,17 @@ impl TakenCards {
         self.coins.len() + self.clubs.len() + self.cups.len() + self.swords.len()
     }
 
+    fn take_card(&mut self, card: Card) {
+        use Suite::*;
+        let put_into = match card.suite {
+            Coins => &mut self.coins,
+            Clubs => &mut self.clubs,
+            Cups => &mut self.cups,
+            Swords => &mut self.swords,
+        };
+        put_into.push(card);
+    }
+
     fn primes(&self) -> u8 {
         self.coins.iter().max().map_or(0, |c| c.prime())
             + self.clubs.iter().max().map_or(0, |c| c.prime())
@@ -55,10 +66,10 @@ pub struct Player {
 }
 
 impl Player {
-    fn new(id: PlayerId, name: String) -> Self {
+    fn new(id: PlayerId, name: &str) -> Self {
         Self {
             id,
-            name,
+            name: name.into(),
             points: 0,
             scopas: 0,
             hand: Vec::with_capacity(3),
@@ -79,14 +90,7 @@ impl Player {
 
     fn take_cards(&mut self, take: Vec<Card>) {
         for card in take {
-            use Suite::*;
-            let put_into = match card.suite {
-                Coins => &mut self.taken.coins,
-                Clubs => &mut self.taken.clubs,
-                Cups => &mut self.taken.cups,
-                Swords => &mut self.taken.swords,
-            };
-            put_into.push(card);
+            self.taken.take_card(card);
         }
     }
 
@@ -165,5 +169,88 @@ impl ScopaGame {
 
     fn consume(&mut self, event: &GameEvent) {
         unimplemented!()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn player_with_cards() -> Player {
+        let mut p = Player::new(0, "test");
+        p.take_cards(vec![
+            Card {
+                suite: Suite::Coins,
+                value: CardValue::Seven,
+            },
+            Card {
+                suite: Suite::Coins,
+                value: CardValue::Six,
+            },
+            Card {
+                suite: Suite::Coins,
+                value: CardValue::One,
+            },
+            Card {
+                suite: Suite::Coins,
+                value: CardValue::Re,
+            },
+            Card {
+                suite: Suite::Swords,
+                value: CardValue::One,
+            },
+            Card {
+                suite: Suite::Swords,
+                value: CardValue::Cavallo,
+            },
+            Card {
+                suite: Suite::Cups,
+                value: CardValue::One,
+            },
+            Card {
+                suite: Suite::Cups,
+                value: CardValue::Six,
+            },
+            Card {
+                suite: Suite::Clubs,
+                value: CardValue::Two,
+            },
+            Card {
+                suite: Suite::Clubs,
+                value: CardValue::Fante,
+            },
+            Card {
+                suite: Suite::Clubs,
+                value: CardValue::Re,
+            },
+        ]);
+        p
+    }
+
+    #[test]
+    fn take_cards() {
+        let p = player_with_cards();
+        assert_eq!(p.taken.count(), 11);
+        assert_eq!(p.taken.coins.len(), 4);
+        assert_eq!(p.taken.swords.len(), 2);
+        assert_eq!(p.taken.cups.len(), 2);
+        assert_eq!(p.taken.clubs.len(), 3);
+    }
+
+    #[test]
+    fn get_primes() {
+        let p = player_with_cards();
+        assert_eq!(p.taken.primes(), 67);
+    }
+
+    #[test]
+    fn check_results() {
+        let p = player_with_cards();
+        let r = p.results();
+        assert_eq!(r.scopas, 0);
+        assert_eq!(r.takes, 11);
+        assert_eq!(r.primes, 67);
+        assert_eq!(r.count_of_coins, 4);
+        assert!(r.seven_of_coins);
     }
 }
