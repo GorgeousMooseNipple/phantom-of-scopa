@@ -75,6 +75,12 @@ pub struct Card {
     pub value: CardValue,
 }
 
+impl PartialOrd for Card {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.prime().partial_cmp(&other.prime())
+    }
+}
+
 impl Card {
     pub fn new(suite: Suite, value: CardValue) -> Self {
         Self { suite, value }
