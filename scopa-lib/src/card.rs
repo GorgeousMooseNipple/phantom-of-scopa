@@ -1,6 +1,7 @@
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Suite {
@@ -142,5 +143,37 @@ impl Deck {
             self.cards.pop().unwrap(),
             self.cards.pop().unwrap(),
         ]
+    }
+}
+
+#[derive(Debug)]
+pub struct Table {
+    table: HashSet<Card>,
+}
+
+impl Default for Table {
+    fn default() -> Self {
+        Self {
+            table: HashSet::with_capacity(10),
+        }
+    }
+}
+
+impl Table {
+    pub fn put_card(&mut self, card: Card) {
+        self.table.insert(card);
+    }
+
+    pub fn take_card(&mut self, card: &Card) -> Option<Card> {
+        self.table.take(card)
+    }
+
+    pub fn contains_same_value(&self, card: &Card) -> bool {
+        for c in self.table.iter() {
+            if c.value == card.value {
+                return true;
+            }
+        }
+        false
     }
 }
