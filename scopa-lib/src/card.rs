@@ -77,7 +77,13 @@ pub struct Card {
 
 impl PartialOrd for Card {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.prime().partial_cmp(&other.prime())
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Card {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.prime().cmp(&other.prime())
     }
 }
 
