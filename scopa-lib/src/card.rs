@@ -11,6 +11,18 @@ pub enum Suite {
     Swords,
 }
 
+impl std::fmt::Display for Suite {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use Suite::*;
+        match self {
+            Clubs => write!(f, "Clubs"),
+            Coins => write!(f, "Coins"),
+            Cups => write!(f, "Cups"),
+            Swords => write!(f, "Swords"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Eq, Serialize, Deserialize)]
 pub enum CardValue {
     One,
@@ -87,6 +99,12 @@ impl Ord for Card {
     }
 }
 
+impl std::fmt::Display for Card {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} of {}", self.value(), self.suite)
+    }
+}
+
 impl Card {
     pub fn new(suite: Suite, value: CardValue) -> Self {
         Self { suite, value }
@@ -156,6 +174,14 @@ impl Deck {
             self.cards.pop().unwrap(),
         ]
     }
+
+    pub fn len(&self) -> usize {
+        self.cards.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.cards.is_empty()
+    }
 }
 
 #[derive(Debug)]
@@ -180,12 +206,23 @@ impl Table {
         self.table.take(card)
     }
 
-    pub fn contains_same_value(&self, card: &Card) -> bool {
-        for c in self.table.iter() {
-            if c.value == card.value {
-                return true;
-            }
-        }
-        false
+    pub fn contains(&self, card: &Card) -> bool {
+        self.table.contains(card)
+    }
+
+    pub fn contains_same_value(&self, card: &Card) -> Option<&Card> {
+        self.table.iter().find(|c| c.value() == card.value())
+    }
+
+    pub fn len(&self) -> usize {
+        self.table.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.table.is_empty()
+    }
+
+    pub fn clear(&mut self) {
+        self.table.clear();
     }
 }
