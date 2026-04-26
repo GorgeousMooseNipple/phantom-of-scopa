@@ -1,5 +1,6 @@
+use crate::config::Config;
 use crate::error::Result;
-use crate::popups::{PopUpEvent, PopUpLocation};
+use crate::popups::PopUpEvent;
 use crate::styles::*;
 use crate::AppState;
 
@@ -8,7 +9,7 @@ use super::components::*;
 use bevy::prelude::*;
 use bevy_simple_text_input::{TextInputBundle, TextInputSubmitEvent, TextInputValue};
 
-pub fn setup_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
+pub fn setup_menu(mut commands: Commands, asset_server: Res<AssetServer>, config: Res<Config>) {
     let root = commands
         .spawn((
             MainMenuUIRoot,
@@ -86,7 +87,7 @@ pub fn setup_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
                 MainMenuUI,
                 TextBundle {
                     text: default_text(
-                        "Input server ip and port in a format ip:port",
+                        "Input server ip and port in a format 'ip:port'",
                         &asset_server,
                     ),
                     ..default()
@@ -106,11 +107,13 @@ pub fn setup_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
                     border_color: INACTIVE_UI.into(),
                     ..default()
                 },
-                TextInputBundle::default().with_text_style(TextStyle {
-                    font: asset_server.load(DEFAULT_FONT),
-                    font_size: INPUT_FONT_SIZE,
-                    color: Color::BLACK,
-                }),
+                TextInputBundle::default()
+                    .with_text_style(TextStyle {
+                        font: asset_server.load(DEFAULT_FONT),
+                        font_size: INPUT_FONT_SIZE,
+                        color: Color::BLACK,
+                    })
+                    .with_value(config.connection_str()),
             ));
             parent
                 .spawn((MainMenuUI, ConnectButton, default_button()))

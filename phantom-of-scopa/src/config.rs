@@ -33,6 +33,12 @@ struct ConnectionInfo {
     port: String,
 }
 
+impl ToString for ConnectionInfo {
+    fn to_string(&self) -> String {
+        format!("{}:{}", self.ip, self.port)
+    }
+}
+
 impl Default for ConnectionInfo {
     fn default() -> Self {
         Self {
@@ -96,5 +102,9 @@ impl Config {
         let config_string = toml::to_string(self)?;
         file.write_all(config_string.as_bytes())?;
         Ok(())
+    }
+
+    pub fn connection_str(&self) -> String {
+        self.connection.to_string()
     }
 }
