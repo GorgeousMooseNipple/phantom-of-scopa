@@ -8,9 +8,6 @@ use super::components::*;
 
 use bevy::prelude::*;
 use bevy_simple_text_input::{TextInputBundle, TextInputSubmitEvent};
-use std::fs::{read_to_string, File};
-use std::io::Write;
-use std::path::Path;
 
 pub fn setup_startup(
     mut commands: Commands,
@@ -73,7 +70,7 @@ pub fn setup_startup(
         ))
         .set_parent(root);
 
-    match load_config() {
+    match Config::load_config() {
         Ok(Some(config)) => {
             commands.insert_resource(config);
             app_state.set(AppState::MainMenu);
@@ -133,24 +130,6 @@ pub fn setup_startup(
     }
 }
 
-fn load_config() -> Result<Option<Config>> {
-    if Path::new(CONFIG_PATH).exists() {
-        let config_as_string = read_to_string(CONFIG_PATH)?;
-        let config: Config = toml::from_str(&config_as_string)?;
-        Ok(Some(config))
-    } else {
-        Ok(None)
-    }
-}
-
-fn create_default_config(username: String) -> Result<Config> {
-    let mut file = File::create(CONFIG_PATH)?;
-    let default_config = Config::default_with_username(username);
-    let config_string = toml::to_string(&default_config)?;
-    file.write_all(config_string.as_bytes())?;
-    Ok(default_config)
-}
-
 pub fn handle_username_input(
     mut commands: Commands,
     mut app_state: ResMut<NextState<AppState>>,
@@ -158,7 +137,7 @@ pub fn handle_username_input(
     mut popup_event: EventWriter<PopUpEvent>,
 ) {
     for input in text_input_events.read() {
-        match create_default_config(input.value.clone()) {
+        match Config::create_init_config(input.value.clone()) {
             Ok(config) => {
                 commands.insert_resource(config);
                 app_state.set(AppState::MainMenu);

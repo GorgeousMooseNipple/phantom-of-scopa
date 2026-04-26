@@ -2,8 +2,9 @@ use crate::error::Result;
 
 use bevy::ecs::system::Resource;
 use serde::{Deserialize, Serialize};
-use std::fs::File;
+use std::fs::{read_to_string, File};
 use std::io::Write;
+use std::path::Path;
 
 pub const CONFIG_PATH: &str = "config.toml";
 pub const MIN_VOLUME: f32 = 0.04;
@@ -55,6 +56,24 @@ impl Config {
             settings: Settings::default(),
             connection: ConnectionInfo::default(),
         }
+    }
+
+    pub fn load_config() -> Result<Option<Config>> {
+        if Path::new(CONFIG_PATH).exists() {
+            let config_as_string = read_to_string(CONFIG_PATH)?;
+            let config: Config = toml::from_str(&config_as_string)?;
+            Ok(Some(config))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn create_init_config(username: String) -> Result<Config> {
+        let mut file = File::create(CONFIG_PATH)?;
+        let default_config = Config::default_with_username(username);
+        let config_string = toml::to_string(&default_config)?;
+        file.write_all(config_string.as_bytes())?;
+        Ok(default_config)
     }
 
     pub fn volume_level(&self) -> usize {
