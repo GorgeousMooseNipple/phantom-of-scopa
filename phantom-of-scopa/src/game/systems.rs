@@ -311,9 +311,10 @@ pub fn put_button_pressed(
     mut table_slots: ResMut<TableSlots>,
     mut commands: Commands,
 ) {
-    if let Ok(card_id) = player_selected_card.get_single() {
-        for interaction in &interaction_query {
-            if let Interaction::Pressed = *interaction {
+    for interaction in &interaction_query {
+        if let Interaction::Pressed = *interaction {
+            // If there is selected card
+            if let Ok(card_id) = player_selected_card.get_single() {
                 match put_card_on_table(card_id, &mut table_slots, &mut commands) {
                     Ok(_) => {
                         play_audio(
@@ -336,6 +337,12 @@ pub fn put_button_pressed(
                     selected_card.remove::<SelectedCard>();
                     selected_card.insert(RemovedCardSelection);
                 }
+            // If no card is selected we clear table FOR TEST REASONS
+            } else {
+                for slot in table_slots.as_mut() {
+                    commands.entity(slot.id()).despawn_descendants();
+                    slot.free();
+                }
             }
         }
     }
@@ -347,7 +354,7 @@ fn put_card_on_table(
     commands: &mut Commands,
 ) -> Result<()> {
     let mut card = commands.entity(card_id);
-    if let Some(slot_id) = table_slots.insert() {
+    if let Some(slot_id) = table_slots.free_slot() {
         card.remove::<SelectedCard>();
         card.insert(RemovedCardSelection);
         card.remove::<PlayerCard>();

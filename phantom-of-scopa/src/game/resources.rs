@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use std::vec::Drain;
 
 #[derive(Resource)]
 pub struct SelectedCardImage(pub Handle<Image>);
@@ -24,6 +25,10 @@ impl TableSlotEntity {
     pub fn occupy(&mut self) {
         self.vacant = false;
     }
+
+    pub fn free(&mut self) {
+        self.vacant = true;
+    }
 }
 
 #[derive(Resource)]
@@ -40,7 +45,7 @@ impl TableSlots {
         self.slots.push(TableSlotEntity::new(entity));
     }
 
-    pub fn insert(&mut self) -> Option<Entity> {
+    pub fn free_slot(&mut self) -> Option<Entity> {
         for i in 0..self.slots.len() {
             if self.slots[i].is_vacant() {
                 self.slots[i].occupy();
@@ -48,6 +53,15 @@ impl TableSlots {
             }
         }
         None
+    }
+}
+
+impl<'a> IntoIterator for &'a mut TableSlots {
+    type Item = &'a mut TableSlotEntity;
+    type IntoIter = std::slice::IterMut<'a, TableSlotEntity>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.slots.iter_mut()
     }
 }
 
