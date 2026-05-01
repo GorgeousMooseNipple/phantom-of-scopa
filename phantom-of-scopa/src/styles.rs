@@ -1,3 +1,4 @@
+#![allow(unused)]
 use crate::popups::{PopUpEvent, PopUpLocation};
 
 use bevy::prelude::*;
@@ -21,14 +22,14 @@ pub const TABLE_SLOT_HEIGHT: f32 = 111.0;
 pub const BUTTON_WIDTH: f32 = 120.0;
 pub const BUTTON_HEIGHT: f32 = 51.0;
 
-pub const DEFAULT_BG: Color = Color::rgba(0.11, 0.13, 0.13, 1.0);
-pub const TEXT_COLOR: Color = Color::rgba(0.85, 0.82, 0.16, 1.0);
-pub const INACTIVE_UI: Color = Color::rgba(0.60, 0.66, 0.24, 1.0);
-pub const HOVERED_INACTIVE_UI: Color = Color::rgba(0.76, 0.80, 0.50, 1.0);
-pub const HOVERED_UI: Color = Color::rgba(0.85, 0.82, 0.16, 1.0);
-pub const SELECTED_UI: Color = Color::rgba(0.85, 0.82, 0.16, 1.0);
-// pub const SELECTED_UI: Color = Color::rgba(0.38, 0.02, 0.03, 1.0);
-pub const HOVERED_SELECTED_UI: Color = Color::rgba(0.77, 0.74, 0.10, 1.0);
+pub const DEFAULT_BG: Color = Color::srgba(0.11, 0.13, 0.13, 1.0);
+pub const TEXT_COLOR: Color = Color::srgba(0.85, 0.82, 0.16, 1.0);
+pub const INACTIVE_UI: Color = Color::srgba(0.60, 0.66, 0.24, 1.0);
+pub const HOVERED_INACTIVE_UI: Color = Color::srgba(0.76, 0.80, 0.50, 1.0);
+pub const HOVERED_UI: Color = Color::srgba(0.85, 0.82, 0.16, 1.0);
+pub const SELECTED_UI: Color = Color::srgba(0.85, 0.82, 0.16, 1.0);
+// pub const SELECTED_UI: Color = Color::srgba(0.38, 0.02, 0.03, 1.0);
+pub const HOVERED_SELECTED_UI: Color = Color::srgba(0.77, 0.74, 0.10, 1.0);
 
 pub const DEFAULT_FONT: &str = "fonts/DroidSerif-Regular.ttf";
 pub const DEFAULT_FONT_SIZE: f32 = 17.0;

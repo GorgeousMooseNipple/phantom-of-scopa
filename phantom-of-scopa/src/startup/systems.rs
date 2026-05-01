@@ -1,6 +1,5 @@
-use crate::config::{Config, CONFIG_PATH};
-use crate::error::Result;
-use crate::popups::{PopUpEvent, PopUpLocation};
+use crate::config::Config;
+use crate::popups::PopUpEvent;
 use crate::styles::*;
 use crate::AppState;
 

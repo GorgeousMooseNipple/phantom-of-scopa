@@ -10,8 +10,8 @@ use scopa_lib::card::*;
 use bevy::audio::Volume;
 use bevy::prelude::*;
 use bevy::ui::RelativeCursorPosition;
-use rand::seq::SliceRandom;
-use rand::thread_rng;
+use rand::prelude::IndexedRandom;
+use rand::rng;
 
 #[derive(Event)]
 pub enum GameEvent {
@@ -266,7 +266,7 @@ pub fn button_highlights(
 
 fn random_hand() -> Vec<Card> {
     let mut rand_hand: Vec<Card> = Vec::with_capacity(3);
-    let mut rng = thread_rng();
+    let mut rng = rng();
     for _ in 0..3 {
         let suite = *[Suite::Coins, Suite::Clubs, Suite::Cups, Suite::Swords]
             .choose(&mut rng)

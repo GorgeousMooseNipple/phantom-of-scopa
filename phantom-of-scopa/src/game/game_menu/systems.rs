@@ -23,7 +23,7 @@ pub fn setup_menu(mut commands: Commands, mut next_state: ResMut<NextState<InGam
                 justify_content: JustifyContent::Center,
                 ..default()
             },
-            background_color: DEFAULT_BG.with_a(0.95).into(),
+            background_color: DEFAULT_BG.with_alpha(0.95).into(),
             ..default()
         },
     ));

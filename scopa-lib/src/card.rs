@@ -1,5 +1,5 @@
+use rand::rng;
 use rand::seq::SliceRandom;
-use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
@@ -142,7 +142,7 @@ impl Default for Deck {
 
 impl Deck {
     pub fn shuffle(&mut self) {
-        self.cards.shuffle(&mut thread_rng());
+        self.cards.shuffle(&mut rng());
     }
 
     // Deal last 3 cards from the deck

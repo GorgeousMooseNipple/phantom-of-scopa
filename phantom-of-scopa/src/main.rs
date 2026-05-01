@@ -23,11 +23,6 @@ enum AppState {
 
 fn main() {
     App::new()
-        .init_state::<AppState>()
-        .add_event::<PopUpEvent>()
-        .add_systems(Startup, setup)
-        .add_systems(Update, highlight_buttons)
-        .add_systems(Update, (handle_popups, clear_expired_popups))
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Phantom of Scopa".into(),
@@ -44,10 +39,15 @@ fn main() {
             }),
             ..default()
         }))
+        .add_event::<PopUpEvent>()
+        .add_systems(Startup, setup)
+        .add_systems(Update, highlight_buttons)
+        .add_systems(Update, (handle_popups, clear_expired_popups))
         .add_plugins(TextInputPlugin)
         .add_plugins(startup::startup_plugin)
         .add_plugins(menu::menu_plugin)
         .add_plugins(game::game_plugin)
+        .init_state::<AppState>()
         .run();
 }
 
