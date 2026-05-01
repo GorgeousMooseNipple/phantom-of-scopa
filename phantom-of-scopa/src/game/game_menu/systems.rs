@@ -5,47 +5,38 @@ use crate::game::GameState;
 use crate::popups::PopUpEvent;
 use crate::styles::*;
 use crate::AppState;
+use bevy::ecs::relationship::RelatedSpawnerCommands;
 use bevy::prelude::*;
 
 pub fn setup_menu(mut commands: Commands, mut next_state: ResMut<NextState<InGameMenuState>>) {
     commands.spawn((
         InGameMenuUI,
         InGameMenuRootNode,
-        NodeBundle {
-            style: Style {
-                position_type: PositionType::Absolute,
-                width: Val::Percent(37.0),
-                height: Val::Percent(60.0),
-                flex_direction: FlexDirection::Column,
-                align_self: AlignSelf::Center,
-                justify_self: JustifySelf::Center,
-                align_items: AlignItems::Center,
-                justify_content: JustifyContent::Center,
-                ..default()
-            },
-            background_color: DEFAULT_BG.with_a(0.95).into(),
+        Node {
+            position_type: PositionType::Absolute,
+            width: Val::Percent(37.0),
+            height: Val::Percent(60.0),
+            flex_direction: FlexDirection::Column,
+            align_self: AlignSelf::Center,
+            justify_self: JustifySelf::Center,
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
             ..default()
         },
+        BackgroundColor(DEFAULT_BG.with_alpha(0.95)),
     ));
     next_state.set(InGameMenuState::Root);
 }
 
 pub fn create_root_in_game_menu(
     root_q: Query<Entity, With<InGameMenuRootNode>>,
-    mut popup_events: EventWriter<PopUpEvent>,
+    mut popup_events: MessageWriter<PopUpEvent>,
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    default_font: Res<DefaultFont>,
 ) {
-    if let Ok(root) = root_q.get_single() {
+    if let Ok(root) = root_q.single() {
         commands.entity(root).with_children(|parent| {
-            parent.spawn(TextBundle {
-                style: Style {
-                    margin: UiRect::bottom(Val::Px(20.0)),
-                    ..default()
-                },
-                text: default_text("PHANTOM OF SCOPA", &asset_server),
-                ..default()
-            });
+            parent.spawn(default_text("PHANTOM OF SCOPA", &default_font.font));
             parent
                 .spawn((
                     InGameMenuUI,
@@ -57,10 +48,7 @@ pub fn create_root_in_game_menu(
                     button.spawn((
                         InGameMenuUI,
                         RootInGameMenuUI,
-                        TextBundle {
-                            text: default_text("Settings", &asset_server),
-                            ..default()
-                        },
+                        default_text("Settings", &default_font.font),
                     ));
                 });
             parent
@@ -74,15 +62,12 @@ pub fn create_root_in_game_menu(
                     button.spawn((
                         InGameMenuUI,
                         RootInGameMenuUI,
-                        TextBundle {
-                            text: default_text("Main menu", &asset_server),
-                            ..default()
-                        },
+                        default_text("Main menu", &default_font.font),
                     ));
                 });
         });
     } else {
-        popup_events.send(PopUpEvent {
+        popup_events.write(PopUpEvent {
             text: "Can't find in-game menu root node".into(),
             ..default()
         });
@@ -90,8 +75,8 @@ pub fn create_root_in_game_menu(
 }
 
 pub fn despawn_submenu(root_q: Query<Entity, With<InGameMenuRootNode>>, mut commands: Commands) {
-    if let Ok(root) = root_q.get_single() {
-        commands.entity(root).despawn_descendants();
+    if let Ok(root) = root_q.single() {
+        commands.entity(root).despawn_children();
     }
 }
 
@@ -99,7 +84,7 @@ pub fn open_settings(
     settings_button_q: Query<&Interaction, (Changed<Interaction>, With<SettingsButton>)>,
     mut next_state: ResMut<NextState<InGameMenuState>>,
 ) {
-    if let Ok(Interaction::Pressed) = settings_button_q.get_single() {
+    if let Ok(Interaction::Pressed) = settings_button_q.single() {
         next_state.set(InGameMenuState::Settings);
     }
 }
@@ -109,7 +94,7 @@ pub fn main_menu(
     mut app_state: ResMut<NextState<AppState>>,
     mut game_state: ResMut<NextState<GameState>>,
 ) {
-    if let Ok(Interaction::Pressed) = main_menu_button_q.get_single() {
+    if let Ok(Interaction::Pressed) = main_menu_button_q.single() {
         game_state.set(GameState::Playing);
         app_state.set(AppState::MainMenu);
     }
@@ -117,38 +102,28 @@ pub fn main_menu(
 
 pub fn create_settings_in_game_menu(
     root_q: Query<Entity, With<InGameMenuRootNode>>,
-    mut popup_events: EventWriter<PopUpEvent>,
+    mut popup_events: MessageWriter<PopUpEvent>,
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    default_font: Res<DefaultFont>,
     config: Res<Config>,
 ) {
     let cur_volume = config.volume_level();
-    if let Ok(root) = root_q.get_single() {
+    if let Ok(root) = root_q.single() {
         commands.entity(root).with_children(|parent| {
             parent.spawn((
                 InGameMenuUI,
                 SettingsUi,
-                TextBundle {
-                    style: Style {
-                        margin: UiRect::bottom(Val::Px(20.0)),
-                        ..default()
-                    },
-                    text: default_text("Volume", &asset_server),
-                    ..default()
-                },
+                default_text("Volume", &default_font.font),
             ));
             parent
                 .spawn((
                     SettingsUi,
-                    NodeBundle {
-                        style: Style {
-                            width: Val::Percent(80.0),
-                            height: Val::Percent(10.0),
-                            margin: UiRect::bottom(Val::Px(20.0)),
-                            flex_direction: FlexDirection::Row,
-                            justify_content: JustifyContent::SpaceEvenly,
-                            ..default()
-                        },
+                    Node {
+                        width: Val::Percent(80.0),
+                        height: Val::Percent(10.0),
+                        margin: UiRect::bottom(Val::Px(20.0)),
+                        flex_direction: FlexDirection::Row,
+                        justify_content: JustifyContent::SpaceEvenly,
                         ..default()
                     },
                 ))
@@ -167,15 +142,12 @@ pub fn create_settings_in_game_menu(
                     button.spawn((
                         InGameMenuUI,
                         RootInGameMenuUI,
-                        TextBundle {
-                            text: default_text("Back", &asset_server),
-                            ..default()
-                        },
+                        default_text("Back", &default_font.font),
                     ));
                 });
         });
     } else {
-        popup_events.send(PopUpEvent {
+        popup_events.write(PopUpEvent {
             text: "Can't find in-game menu root node".into(),
             ..default()
         });
@@ -183,7 +155,7 @@ pub fn create_settings_in_game_menu(
 }
 
 fn create_volume_button(
-    parent: &mut ChildBuilder<'_>,
+    parent: &mut RelatedSpawnerCommands<'_, ChildOf>,
     volume_level: usize,
     selected: bool,
 ) -> Entity {
@@ -191,14 +163,12 @@ fn create_volume_button(
         InGameMenuUI,
         SettingsUi,
         VolumeSettingsButton(volume_level),
-        ButtonBundle {
-            style: Style {
-                width: Val::Px(16.0),
-                ..default()
-            },
-            background_color: INACTIVE_UI.into(),
+        Button,
+        Node {
+            width: Val::Px(16.0),
             ..default()
         },
+        BackgroundColor(INACTIVE_UI),
     ));
     if selected {
         commands.insert(SelectedVolume);
@@ -231,18 +201,18 @@ pub fn selected_volume_button(
     mut selected_q: Query<(Entity, &mut BackgroundColor), With<SelectedVolume>>,
     mut commands: Commands,
     mut config: ResMut<Config>,
-    mut popup_events: EventWriter<PopUpEvent>,
+    mut popup_events: MessageWriter<PopUpEvent>,
 ) {
     for (interaction, id, volume) in &interaction_q {
         if *interaction == Interaction::Pressed {
-            if let Ok((prev_id, mut prev_bg)) = selected_q.get_single_mut() {
+            if let Ok((prev_id, mut prev_bg)) = selected_q.single_mut() {
                 *prev_bg = INACTIVE_UI.into();
                 commands.entity(prev_id).remove::<SelectedVolume>();
             }
             commands.entity(id).insert(SelectedVolume);
             config.set_volume_level(volume.0);
             if let Err(e) = config.save() {
-                popup_events.send(error_popup(e.to_string()));
+                popup_events.write(error_popup(e.to_string()));
             }
         }
     }
@@ -255,7 +225,7 @@ pub fn back_to_root(
     >,
     mut next_state: ResMut<NextState<InGameMenuState>>,
 ) {
-    if let Ok(Interaction::Pressed) = settings_button_q.get_single() {
+    if let Ok(Interaction::Pressed) = settings_button_q.single() {
         next_state.set(InGameMenuState::Root);
     }
 }
@@ -266,7 +236,7 @@ pub fn close_menu(
     mut next_state: ResMut<NextState<InGameMenuState>>,
 ) {
     for ui in &ingame_menu_ui_q {
-        commands.entity(ui).despawn_recursive();
+        commands.entity(ui).despawn();
     }
     next_state.set(InGameMenuState::Closed);
 }

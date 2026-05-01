@@ -6,11 +6,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = "0.13.2"
-bevy_renet = "0.0.10"
-bevy_simple_text_input = "0.5.1"
-rand = "0.8.6"
-renet = "0.0.14"
+bevy = { version = "0.18.1", features = ["debug", "bevy_dev_tools"]}
+bevy_renet = "4.0.1"
+bevy_simple_text_input = "0.14.2"
+rand = "0.10.1"
+renet = "2.0.0"
 scopa-lib = { path = "../scopa-lib/" }
 serde = { version = "1.0.228", features = ["derive"] }
-toml = "0.8.23"
+toml = "1.1.2"

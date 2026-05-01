@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use std::vec::Drain;
 
 #[derive(Resource)]
 pub struct SelectedCardImage(pub Handle<Image>);

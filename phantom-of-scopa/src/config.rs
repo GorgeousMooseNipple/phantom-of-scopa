@@ -1,6 +1,6 @@
 use crate::error::Result;
 
-use bevy::ecs::system::Resource;
+use bevy::ecs::resource::Resource;
 use serde::{Deserialize, Serialize};
 use std::fs::{read_to_string, File};
 use std::io::Write;

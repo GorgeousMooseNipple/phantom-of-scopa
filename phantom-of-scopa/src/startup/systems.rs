@@ -1,36 +1,34 @@
-use crate::config::{Config, CONFIG_PATH};
-use crate::error::Result;
-use crate::popups::{PopUpEvent, PopUpLocation};
+use crate::config::Config;
+use crate::popups::PopUpEvent;
 use crate::styles::*;
 use crate::AppState;
 
 use super::components::*;
 
 use bevy::prelude::*;
-use bevy_simple_text_input::{TextInputBundle, TextInputSubmitEvent};
+use bevy_simple_text_input::{
+    TextInput, TextInputSubmitMessage, TextInputTextColor, TextInputTextFont,
+};
 
 pub fn setup_startup(
     mut commands: Commands,
-    mut popup_event: EventWriter<PopUpEvent>,
+    mut popup_event: MessageWriter<PopUpEvent>,
     mut app_state: ResMut<NextState<AppState>>,
-    asset_server: Res<AssetServer>,
+    default_font: Res<DefaultFont>,
 ) {
     let root = commands
         .spawn((
             StartUpUIRoot,
-            NodeBundle {
-                style: Style {
-                    position_type: PositionType::Absolute,
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    flex_direction: FlexDirection::Column,
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    ..default()
-                },
-                background_color: DEFAULT_BG.into(),
+            Node {
+                position_type: PositionType::Absolute,
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
                 ..default()
             },
+            BackgroundColor(DEFAULT_BG),
         ))
         .id();
 
@@ -38,37 +36,30 @@ pub fn setup_startup(
     commands
         .spawn((
             StartUpUI,
-            NodeBundle {
-                style: Style {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(20.0),
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    ..default()
-                },
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(20.0),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
                 ..default()
             },
+            ChildOf(root),
         ))
         .with_children(|parent| {
-            parent.spawn((StartUpUI, game_title(&asset_server)));
-        })
-        .set_parent(root);
+            parent.spawn((StartUpUI, game_title(&default_font.font)));
+        });
 
-    commands
-        .spawn((
-            StartUpUI,
-            NodeBundle {
-                style: Style {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(80.0),
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    ..default()
-                },
-                ..default()
-            },
-        ))
-        .set_parent(root);
+    commands.spawn((
+        StartUpUI,
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(80.0),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            ..default()
+        },
+        ChildOf(root),
+    ));
 
     match Config::load_config() {
         Ok(Some(config)) => {
@@ -79,53 +70,42 @@ pub fn setup_startup(
             commands
                 .spawn((
                     StartUpUI,
-                    NodeBundle {
-                        style: Style {
-                            position_type: PositionType::Absolute,
-                            flex_direction: FlexDirection::Column,
-                            align_items: AlignItems::Center,
-                            justify_content: JustifyContent::Center,
-                            ..default()
-                        },
+                    Node {
+                        position_type: PositionType::Absolute,
+                        flex_direction: FlexDirection::Column,
+                        align_items: AlignItems::Center,
+                        justify_content: JustifyContent::Center,
                         ..default()
                     },
+                    ChildOf(root),
                 ))
                 .with_children(|parent| {
                     parent.spawn((
                         StartUpUI,
-                        TextBundle {
-                            style: Style {
-                                margin: UiRect::bottom(Val::Px(10.0)),
-                                ..default()
-                            },
-                            text: default_text("Input username:", &asset_server),
-                            ..default()
-                        },
+                        default_text("Input username:", &default_font.font),
                     ));
                     parent.spawn((
                         StartUpUI,
-                        NodeBundle {
-                            style: Style {
-                                width: Val::Px(200.0),
-                                border: UiRect::all(Val::Px(5.0)),
-                                padding: UiRect::all(Val::Px(5.0)),
-                                ..default()
-                            },
-                            background_color: Color::WHITE.into(),
-                            border_color: INACTIVE_UI.into(),
+                        Node {
+                            width: Val::Px(200.0),
+                            border: UiRect::all(Val::Px(5.0)),
+                            padding: UiRect::all(Val::Px(5.0)),
                             ..default()
                         },
-                        TextInputBundle::default().with_text_style(TextStyle {
-                            font: asset_server.load(DEFAULT_FONT),
-                            font_size: INPUT_FONT_SIZE,
-                            color: Color::BLACK,
+                        BackgroundColor(Color::WHITE),
+                        BorderColor::all(INACTIVE_UI),
+                        TextInput::default(),
+                        TextInputTextFont(TextFont {
+                            font: default_font.font.clone(),
+                            font_size: DEFAULT_FONT_SIZE,
+                            ..default()
                         }),
+                        TextInputTextColor(TextColor(TEXT_COLOR)),
                     ));
-                })
-                .set_parent(root);
+                });
         }
         Err(e) => {
-            popup_event.send(error_popup(e.to_string()));
+            popup_event.write(error_popup(e.to_string()));
         }
     }
 }
@@ -133,8 +113,8 @@ pub fn setup_startup(
 pub fn handle_username_input(
     mut commands: Commands,
     mut app_state: ResMut<NextState<AppState>>,
-    mut text_input_events: EventReader<TextInputSubmitEvent>,
-    mut popup_event: EventWriter<PopUpEvent>,
+    mut text_input_events: MessageReader<TextInputSubmitMessage>,
+    mut popup_event: MessageWriter<PopUpEvent>,
 ) {
     for input in text_input_events.read() {
         match Config::create_init_config(input.value.clone()) {
@@ -143,7 +123,7 @@ pub fn handle_username_input(
                 app_state.set(AppState::MainMenu);
             }
             Err(e) => {
-                popup_event.send(error_popup(e.to_string()));
+                popup_event.write(error_popup(e.to_string()));
             }
         }
     }

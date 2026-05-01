@@ -18,7 +18,7 @@ pub struct PopUpMessage {
 #[derive(Component, Debug)]
 pub struct PopUpText;
 
-#[derive(Event)]
+#[derive(Message)]
 pub struct PopUpEvent {
     pub text: String,
     pub duration: f64,
@@ -42,15 +42,15 @@ impl Default for PopUpEvent {
 pub fn handle_popups(
     popups_query: Query<(Entity, &PopUpMessage)>,
     mut commands: Commands,
-    mut popup_events: EventReader<PopUpEvent>,
+    mut popup_events: MessageReader<PopUpEvent>,
     time: Res<Time>,
-    asset_server: Res<AssetServer>,
+    default_font: Res<DefaultFont>,
 ) {
     for event in popup_events.read() {
         // Clear popups that are already present on the same part of the screen
         for (id, popup) in &popups_query {
             if popup.location == event.location {
-                commands.entity(id).despawn_recursive();
+                commands.entity(id).despawn();
             }
         }
         let align_popup = match event.location {
@@ -61,43 +61,26 @@ pub fn handle_popups(
         commands
             .spawn((
                 PopUpMessage {
-                    expiration_time: time.elapsed_seconds_f64() + event.duration,
+                    expiration_time: time.elapsed_secs_f64() + event.duration,
                     location: event.location,
                 },
-                NodeBundle {
-                    style: Style {
-                        position_type: PositionType::Absolute,
-                        align_self: align_popup,
-                        justify_self: JustifySelf::Center,
-                        align_items: AlignItems::Center,
-                        justify_content: JustifyContent::Center,
-                        width: event.width,
-                        height: event.height,
-                        margin: UiRect::vertical(Val::Px(10.0)),
-                        ..default()
-                    },
-                    background_color: BackgroundColor(DEFAULT_BG),
+                Node {
+                    position_type: PositionType::Absolute,
+                    align_self: align_popup,
+                    justify_self: JustifySelf::Center,
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
+                    width: event.width,
+                    height: event.height,
+                    margin: UiRect::vertical(Val::Px(10.0)),
                     ..default()
                 },
+                BackgroundColor(DEFAULT_BG),
             ))
             .with_children(|parent| {
                 parent.spawn((
                     PopUpText,
-                    TextBundle {
-                        text: Text {
-                            sections: vec![TextSection {
-                                value: event.text.clone(),
-                                style: TextStyle {
-                                    font: asset_server.load(DEFAULT_FONT),
-                                    font_size: DEFAULT_FONT_SIZE,
-                                    color: TEXT_COLOR,
-                                },
-                            }],
-                            justify: JustifyText::Center,
-                            ..default()
-                        },
-                        ..default()
-                    },
+                    default_text(event.text.as_str(), &default_font.font),
                 ));
             });
     }
@@ -109,8 +92,8 @@ pub fn clear_expired_popups(
     mut commands: Commands,
 ) {
     for (id, message) in &popups_query {
-        if time.elapsed_seconds_f64() > message.expiration_time {
-            commands.entity(id).despawn_recursive();
+        if time.elapsed_secs_f64() > message.expiration_time {
+            commands.entity(id).despawn();
         }
     }
 }

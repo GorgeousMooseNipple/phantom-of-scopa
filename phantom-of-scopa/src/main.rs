@@ -10,7 +10,7 @@ use popups::*;
 use styles::*;
 
 use bevy::prelude::*;
-use bevy::window::{PresentMode, WindowTheme};
+use bevy::window::{PresentMode, WindowResolution, WindowTheme};
 use bevy_simple_text_input::TextInputPlugin;
 
 #[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]
@@ -22,28 +22,34 @@ enum AppState {
 }
 
 fn main() {
-    App::new()
-        .init_state::<AppState>()
-        .add_event::<PopUpEvent>()
-        .add_systems(Startup, setup)
+    let mut app = App::new();
+    app.add_plugins(DefaultPlugins.set(WindowPlugin {
+        primary_window: Some(Window {
+            title: "Phantom of Scopa".into(),
+            resolution: WindowResolution::new(800, 481),
+            present_mode: PresentMode::AutoVsync,
+            prevent_default_event_handling: false,
+            window_theme: Some(WindowTheme::Dark),
+            resizable: false,
+            enabled_buttons: bevy::window::EnabledButtons {
+                maximize: false,
+                ..Default::default()
+            },
+            ..default()
+        }),
+        ..default()
+    }));
+
+    let asset_server = app.world().resource::<AssetServer>();
+    app.insert_resource(DefaultFont {
+        font: asset_server.load(DEFAULT_FONT),
+    });
+
+    app.add_message::<PopUpEvent>()
+        .add_systems(PreStartup, setup)
         .add_systems(Update, highlight_buttons)
         .add_systems(Update, (handle_popups, clear_expired_popups))
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "Phantom of Scopa".into(),
-                resolution: (800., 481.).into(),
-                present_mode: PresentMode::AutoVsync,
-                prevent_default_event_handling: false,
-                window_theme: Some(WindowTheme::Dark),
-                resizable: false,
-                enabled_buttons: bevy::window::EnabledButtons {
-                    maximize: false,
-                    ..Default::default()
-                },
-                ..default()
-            }),
-            ..default()
-        }))
+        .init_state::<AppState>()
         .add_plugins(TextInputPlugin)
         .add_plugins(startup::startup_plugin)
         .add_plugins(menu::menu_plugin)
@@ -52,7 +58,7 @@ fn main() {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2d::default());
 }
 
 #[allow(clippy::type_complexity)]
@@ -70,6 +76,6 @@ pub fn highlight_buttons(
 
 fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut commands: Commands) {
     for entity in to_despawn.iter() {
-        commands.entity(entity).despawn_recursive();
+        commands.entity(entity).despawn();
     }
 }

@@ -28,8 +28,7 @@ pub fn game_menu_plugin(app: &mut App) {
         .configure_sets(
             Update,
             (
-                InGameMenuSet
-                    .run_if(in_state(AppState::InGame).and_then(in_state(GameState::Menu))),
+                InGameMenuSet.run_if(in_state(AppState::InGame).and(in_state(GameState::Menu))),
                 RootInGameMenuSet
                     .in_set(InGameMenuSet)
                     .run_if(in_state(InGameMenuState::Root)),

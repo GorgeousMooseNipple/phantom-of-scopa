@@ -38,14 +38,14 @@ pub fn game_plugin(app: &mut App) {
     app.add_plugins(game_menu::game_menu_plugin)
         .init_state::<GameState>()
         .init_state::<ScopaState>()
-        .add_event::<GameEvent>()
+        .add_message::<GameEvent>()
         .configure_sets(
             Update,
             (
                 InGameSet.run_if(in_state(AppState::InGame)),
-                PlayerSet.in_set(InGameSet).run_if(
-                    in_state(GameState::Playing).and_then(in_state(ScopaState::PlayerTurn)),
-                ),
+                PlayerSet
+                    .in_set(InGameSet)
+                    .run_if(in_state(GameState::Playing).and(in_state(ScopaState::PlayerTurn))),
                 DragAndDrop.in_set(PlayerSet),
             ),
         )
@@ -58,16 +58,16 @@ pub fn game_plugin(app: &mut App) {
                 take_button_pressed,
                 select_hand_card,
                 select_table_card,
-                update_selected_cards
-                    .after(select_hand_card)
-                    .after(select_table_card),
-                put_button_pressed,
+                // update_selected_cards
+                // .after(select_hand_card)
+                // .after(select_table_card),
+                // put_button_pressed,
             )
                 .in_set(PlayerSet),
         )
-        .add_systems(
-            Update,
-            (drag_start, update_drag_cursor, drop_in, highlight_on_drag).in_set(DragAndDrop),
-        )
+        // .add_systems(
+        //     Update,
+        //     (drag_start, update_drag_cursor, drop_in, highlight_on_drag).in_set(DragAndDrop),
+        // )
         .add_systems(OnExit(AppState::InGame), despawn_screen::<InGameComponent>);
 }

@@ -7,26 +7,25 @@ use crate::AppState;
 use super::components::*;
 
 use bevy::prelude::*;
-use bevy_simple_text_input::{TextInputBundle, TextInputSubmitEvent, TextInputValue};
+use bevy_simple_text_input::{
+    TextInput, TextInputSubmitMessage, TextInputTextColor, TextInputTextFont, TextInputValue,
+};
 
-pub fn setup_menu(mut commands: Commands, asset_server: Res<AssetServer>, config: Res<Config>) {
+pub fn setup_menu(mut commands: Commands, config: Res<Config>, default_font: Res<DefaultFont>) {
     let root = commands
         .spawn((
             MainMenuUIRoot,
             MainMenuUI,
-            NodeBundle {
-                style: Style {
-                    position_type: PositionType::Absolute,
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    flex_direction: FlexDirection::Column,
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    ..default()
-                },
-                background_color: DEFAULT_BG.into(),
+            Node {
+                position_type: PositionType::Absolute,
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
                 ..default()
             },
+            BackgroundColor(DEFAULT_BG),
         ))
         .id();
 
@@ -34,110 +33,93 @@ pub fn setup_menu(mut commands: Commands, asset_server: Res<AssetServer>, config
     commands
         .spawn((
             MainMenuUI,
-            NodeBundle {
-                style: Style {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(20.0),
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    ..default()
-                },
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(20.0),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
                 ..default()
             },
+            ChildOf(root),
         ))
         .with_children(|parent| {
-            parent.spawn((MainMenuUI, game_title(&asset_server)));
-        })
-        .set_parent(root);
+            parent.spawn((MainMenuUI, game_title(&default_font.font)));
+        });
 
     // Fill Space
-    commands
-        .spawn((
-            MainMenuUI,
-            NodeBundle {
-                style: Style {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(80.0),
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    ..default()
-                },
-                ..default()
-            },
-        ))
-        .set_parent(root);
+    commands.spawn((
+        MainMenuUI,
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(80.0),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            ..default()
+        },
+        ChildOf(root),
+    ));
 
     // Input
     commands
         .spawn((
             MainMenuUI,
-            NodeBundle {
-                style: Style {
-                    position_type: PositionType::Absolute,
-                    flex_direction: FlexDirection::Column,
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    ..default()
-                },
+            ChildOf(root),
+            Node {
+                position_type: PositionType::Absolute,
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
                 ..default()
             },
         ))
         .with_children(|parent| {
             parent.spawn((
                 MainMenuUI,
-                TextBundle {
-                    text: default_text(
-                        "Input server ip and port in a format 'ip:port'",
-                        &asset_server,
-                    ),
-                    ..default()
-                },
+                default_text(
+                    "Input server ip and port in a format 'ip:port'",
+                    &default_font.font,
+                ),
             ));
             parent.spawn((
                 MainMenuUI,
-                NodeBundle {
-                    style: Style {
-                        width: Val::Px(200.0),
-                        border: UiRect::all(Val::Px(5.0)),
-                        padding: UiRect::all(Val::Px(5.0)),
-                        margin: UiRect::vertical(Val::Px(10.0)),
-                        ..default()
-                    },
-                    background_color: Color::WHITE.into(),
-                    border_color: INACTIVE_UI.into(),
+                Node {
+                    width: Val::Px(200.0),
+                    border: UiRect::all(Val::Px(5.0)),
+                    padding: UiRect::all(Val::Px(5.0)),
+                    margin: UiRect::vertical(Val::Px(10.0)),
                     ..default()
                 },
-                TextInputBundle::default()
-                    .with_text_style(TextStyle {
-                        font: asset_server.load(DEFAULT_FONT),
-                        font_size: INPUT_FONT_SIZE,
-                        color: Color::BLACK,
-                    })
-                    .with_value(config.connection_str()),
+                BackgroundColor(Color::WHITE),
+                BorderColor::all(INACTIVE_UI),
+                TextInput::default(),
+                TextInputTextFont(TextFont {
+                    font: default_font.font.clone(),
+                    font_size: DEFAULT_FONT_SIZE,
+                    ..default()
+                }),
+                TextInputTextColor(TextColor(TEXT_COLOR)),
+                TextInputValue(config.connection_str()),
             ));
             parent
                 .spawn((MainMenuUI, ConnectButton, default_button()))
                 .with_children(|button| {
-                    button.spawn((
-                        MainMenuUI,
-                        TextBundle {
-                            text: default_text("Connect", &asset_server),
-                            ..default()
-                        },
-                    ));
+                    button.spawn((MainMenuUI, default_text("Connect", &default_font.font)));
                 });
-        })
-        .set_parent(root);
+        });
 }
 
+#[allow(unused)]
 pub fn connect_button(
     interactions: Query<&Interaction, (Changed<Interaction>, With<ConnectButton>)>,
     text_input_q: Query<&TextInputValue, With<MainMenuUI>>,
     mut app_state: ResMut<NextState<AppState>>,
-    mut popup_events: EventWriter<PopUpEvent>,
+    mut popup_events: MessageWriter<PopUpEvent>,
 ) {
-    if let Ok(Interaction::Pressed) = interactions.get_single() {
-        app_state.set(AppState::InGame);
+    for interaction in interactions {
+        match *interaction {
+            Interaction::Pressed => app_state.set(AppState::InGame),
+            _ => {}
+        }
     }
     // if let Ok(input) = text_input_q.get_single() {
     //     match connect(input.0.as_str()) {
@@ -152,8 +134,8 @@ pub fn connect_button(
 }
 
 pub fn handle_connection_input(
-    mut text_input_events: EventReader<TextInputSubmitEvent>,
-    mut popup_events: EventWriter<PopUpEvent>,
+    mut text_input_events: MessageReader<TextInputSubmitMessage>,
+    mut popup_events: MessageWriter<PopUpEvent>,
 ) {
     for input in text_input_events.read() {
         match connect(input.value.as_str()) {
@@ -161,12 +143,13 @@ pub fn handle_connection_input(
                 todo!("Connected successfully, so change state to AppState::InGame");
             }
             Err(e) => {
-                popup_events.send(error_popup(e.to_string()));
+                popup_events.write(error_popup(e.to_string()));
             }
         }
     }
 }
 
+#[allow(unused)]
 fn connect(connection_string: &str) -> Result<()> {
     todo!("Try to connect to server");
 }
