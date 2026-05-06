@@ -226,3 +226,53 @@ impl Table {
         self.table.clear();
     }
 }
+
+#[derive(Debug)]
+pub struct TakenCards {
+    pub coins: Vec<Card>,
+    pub clubs: Vec<Card>,
+    pub cups: Vec<Card>,
+    pub swords: Vec<Card>,
+}
+
+impl Default for TakenCards {
+    fn default() -> Self {
+        Self {
+            coins: Vec::with_capacity(10),
+            clubs: Vec::with_capacity(10),
+            cups: Vec::with_capacity(10),
+            swords: Vec::with_capacity(10),
+        }
+    }
+}
+
+impl TakenCards {
+    pub fn clear(&mut self) {
+        self.coins.clear();
+        self.clubs.clear();
+        self.cups.clear();
+        self.swords.clear();
+    }
+
+    pub fn count(&self) -> usize {
+        self.coins.len() + self.clubs.len() + self.cups.len() + self.swords.len()
+    }
+
+    pub fn take_card(&mut self, card: Card) {
+        use Suite::*;
+        let put_into = match card.suite {
+            Coins => &mut self.coins,
+            Clubs => &mut self.clubs,
+            Cups => &mut self.cups,
+            Swords => &mut self.swords,
+        };
+        put_into.push(card);
+    }
+
+    pub fn primes(&self) -> u8 {
+        self.coins.iter().max().map_or(0, |c| c.prime())
+            + self.clubs.iter().max().map_or(0, |c| c.prime())
+            + self.cups.iter().max().map_or(0, |c| c.prime())
+            + self.swords.iter().max().map_or(0, |c| c.prime())
+    }
+}

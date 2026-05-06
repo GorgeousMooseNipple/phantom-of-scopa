@@ -107,4 +107,8 @@ impl Config {
     pub fn connection_str(&self) -> String {
         self.connection.to_string()
     }
+
+    pub fn players_name(&self) -> &str {
+        &self.player.name
+    }
 }

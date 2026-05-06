@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 bevy = "0.13.2"
+bevy_mod_picking = "0.19"
 bevy_renet = "0.0.10"
 bevy_simple_text_input = "0.5.1"
 rand = "0.8.6"

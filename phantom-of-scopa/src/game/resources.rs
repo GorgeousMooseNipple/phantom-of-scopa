@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use std::vec::Drain;
 
 #[derive(Resource)]
 pub struct SelectedCardImage(pub Handle<Image>);
@@ -62,32 +61,5 @@ impl<'a> IntoIterator for &'a mut TableSlots {
 
     fn into_iter(self) -> Self::IntoIter {
         self.slots.iter_mut()
-    }
-}
-
-#[derive(Resource)]
-pub struct DragCursor {
-    entity: Entity,
-    to_drag: Option<Entity>,
-}
-
-impl DragCursor {
-    pub fn new(entity: Entity) -> Self {
-        Self {
-            entity,
-            to_drag: None,
-        }
-    }
-
-    pub fn entity(&self) -> Entity {
-        self.entity
-    }
-
-    pub fn drag_target(&mut self, drag_target: Entity) {
-        self.to_drag = Some(drag_target);
-    }
-
-    pub fn take_dragged(&mut self) -> Option<Entity> {
-        self.to_drag.take()
     }
 }

@@ -34,7 +34,7 @@ pub fn create_root_in_game_menu(
     root_q: Query<Entity, With<InGameMenuRootNode>>,
     mut popup_events: EventWriter<PopUpEvent>,
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    font: Res<DefaultFont>,
 ) {
     if let Ok(root) = root_q.get_single() {
         commands.entity(root).with_children(|parent| {
@@ -43,7 +43,7 @@ pub fn create_root_in_game_menu(
                     margin: UiRect::bottom(Val::Px(20.0)),
                     ..default()
                 },
-                text: default_text("PHANTOM OF SCOPA", &asset_server),
+                text: default_text("PHANTOM OF SCOPA", &font.font),
                 ..default()
             });
             parent
@@ -58,7 +58,7 @@ pub fn create_root_in_game_menu(
                         InGameMenuUI,
                         RootInGameMenuUI,
                         TextBundle {
-                            text: default_text("Settings", &asset_server),
+                            text: default_text("Settings", &font.font),
                             ..default()
                         },
                     ));
@@ -75,7 +75,7 @@ pub fn create_root_in_game_menu(
                         InGameMenuUI,
                         RootInGameMenuUI,
                         TextBundle {
-                            text: default_text("Main menu", &asset_server),
+                            text: default_text("Main menu", &font.font),
                             ..default()
                         },
                     ));
@@ -119,7 +119,7 @@ pub fn create_settings_in_game_menu(
     root_q: Query<Entity, With<InGameMenuRootNode>>,
     mut popup_events: EventWriter<PopUpEvent>,
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    default_font: Res<DefaultFont>,
     config: Res<Config>,
 ) {
     let cur_volume = config.volume_level();
@@ -133,7 +133,7 @@ pub fn create_settings_in_game_menu(
                         margin: UiRect::bottom(Val::Px(20.0)),
                         ..default()
                     },
-                    text: default_text("Volume", &asset_server),
+                    text: default_text("Volume", &default_font.font),
                     ..default()
                 },
             ));
@@ -168,7 +168,7 @@ pub fn create_settings_in_game_menu(
                         InGameMenuUI,
                         RootInGameMenuUI,
                         TextBundle {
-                            text: default_text("Back", &asset_server),
+                            text: default_text("Back", &default_font.font),
                             ..default()
                         },
                     ));
@@ -249,10 +249,7 @@ pub fn selected_volume_button(
 }
 
 pub fn back_to_root(
-    settings_button_q: Query<
-        &Interaction,
-        (Changed<Interaction>, (With<Button>, With<BackToRootButton>)),
-    >,
+    settings_button_q: Query<&Interaction, (Changed<Interaction>, With<BackToRootButton>)>,
     mut next_state: ResMut<NextState<InGameMenuState>>,
 ) {
     if let Ok(Interaction::Pressed) = settings_button_q.get_single() {

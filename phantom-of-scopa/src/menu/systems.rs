@@ -9,7 +9,7 @@ use super::components::*;
 use bevy::prelude::*;
 use bevy_simple_text_input::{TextInputBundle, TextInputSubmitEvent, TextInputValue};
 
-pub fn setup_menu(mut commands: Commands, asset_server: Res<AssetServer>, config: Res<Config>) {
+pub fn setup_menu(mut commands: Commands, font: Res<DefaultFont>, config: Res<Config>) {
     let root = commands
         .spawn((
             MainMenuUIRoot,
@@ -46,7 +46,7 @@ pub fn setup_menu(mut commands: Commands, asset_server: Res<AssetServer>, config
             },
         ))
         .with_children(|parent| {
-            parent.spawn((MainMenuUI, game_title(&asset_server)));
+            parent.spawn((MainMenuUI, game_title(&font.font)));
         })
         .set_parent(root);
 
@@ -88,7 +88,7 @@ pub fn setup_menu(mut commands: Commands, asset_server: Res<AssetServer>, config
                 TextBundle {
                     text: default_text(
                         "Input server ip and port in a format 'ip:port'",
-                        &asset_server,
+                        &font.font,
                     ),
                     ..default()
                 },
@@ -109,7 +109,7 @@ pub fn setup_menu(mut commands: Commands, asset_server: Res<AssetServer>, config
                 },
                 TextInputBundle::default()
                     .with_text_style(TextStyle {
-                        font: asset_server.load(DEFAULT_FONT),
+                        font: font.font.clone(),
                         font_size: INPUT_FONT_SIZE,
                         color: Color::BLACK,
                     })
@@ -121,7 +121,7 @@ pub fn setup_menu(mut commands: Commands, asset_server: Res<AssetServer>, config
                     button.spawn((
                         MainMenuUI,
                         TextBundle {
-                            text: default_text("Connect", &asset_server),
+                            text: default_text("Connect", &font.font),
                             ..default()
                         },
                     ));

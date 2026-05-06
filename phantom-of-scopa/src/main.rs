@@ -11,6 +11,7 @@ use styles::*;
 
 use bevy::prelude::*;
 use bevy::window::{PresentMode, WindowTheme};
+use bevy_mod_picking::DefaultPickingPlugins;
 use bevy_simple_text_input::TextInputPlugin;
 
 #[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]
@@ -22,29 +23,36 @@ enum AppState {
 }
 
 fn main() {
-    App::new()
-        .init_state::<AppState>()
+    let mut app = App::new();
+    app.add_plugins(DefaultPlugins.set(WindowPlugin {
+        primary_window: Some(Window {
+            title: "Phantom of Scopa".into(),
+            resolution: (800., 481.).into(),
+            present_mode: PresentMode::AutoVsync,
+            prevent_default_event_handling: false,
+            window_theme: Some(WindowTheme::Dark),
+            resizable: false,
+            enabled_buttons: bevy::window::EnabledButtons {
+                maximize: false,
+                ..Default::default()
+            },
+            ..default()
+        }),
+        ..default()
+    }))
+    .add_plugins(DefaultPickingPlugins)
+    .add_plugins(TextInputPlugin);
+
+    let asset_server = app.world.resource::<AssetServer>();
+    app.insert_resource(DefaultFont {
+        font: asset_server.load(DEFAULT_FONT),
+    });
+
+    app.init_state::<AppState>()
         .add_event::<PopUpEvent>()
         .add_systems(Startup, setup)
         .add_systems(Update, highlight_buttons)
         .add_systems(Update, (handle_popups, clear_expired_popups))
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "Phantom of Scopa".into(),
-                resolution: (800., 481.).into(),
-                present_mode: PresentMode::AutoVsync,
-                prevent_default_event_handling: false,
-                window_theme: Some(WindowTheme::Dark),
-                resizable: false,
-                enabled_buttons: bevy::window::EnabledButtons {
-                    maximize: false,
-                    ..Default::default()
-                },
-                ..default()
-            }),
-            ..default()
-        }))
-        .add_plugins(TextInputPlugin)
         .add_plugins(startup::startup_plugin)
         .add_plugins(menu::menu_plugin)
         .add_plugins(game::game_plugin)

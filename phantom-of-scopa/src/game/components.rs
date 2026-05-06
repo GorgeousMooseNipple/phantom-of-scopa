@@ -1,27 +1,122 @@
-use bevy::ecs::component::Component;
-use bevy::ecs::entity::Entity;
+#![allow(unused)]
+use bevy::prelude::*;
 use scopa_lib::card::*;
 
 #[derive(Component, Debug)]
 pub struct InGameComponent;
 
 #[derive(Component, Debug)]
+pub struct SizedArea {
+    pub size: Vec2,
+}
+
+#[derive(Bundle, Debug)]
+pub struct LogicalArea {
+    pub area: SizedArea,
+    pub sprite: Sprite,
+    pub global_transform: GlobalTransform,
+    pub texture: Handle<Image>,
+    pub visibility: Visibility,
+    pub inherited_visibility: InheritedVisibility,
+    pub view_visibility: ViewVisibility,
+}
+
+impl LogicalArea {
+    pub fn with_size(size: Vec2) -> Self {
+        Self {
+            area: SizedArea { size: size },
+            sprite: Sprite {
+                color: Color::default().with_a(0.),
+                custom_size: Some(size),
+                ..default()
+            },
+            global_transform: GlobalTransform::default(),
+            texture: Handle::<Image>::Weak(AssetId::default()),
+            visibility: Visibility::Visible,
+            inherited_visibility: InheritedVisibility::default(),
+            view_visibility: ViewVisibility::default(),
+        }
+    }
+}
+
+#[derive(Component, Debug)]
+pub struct DebugSprite {
+    pub alpha: f32,
+    pub color: Color,
+}
+
+impl DebugSprite {
+    pub fn with_color(color: Color) -> Self {
+        Self { alpha: 0.5, color }
+    }
+}
+
+impl Default for DebugSprite {
+    fn default() -> Self {
+        Self {
+            alpha: 0.5,
+            color: Color::rgba(1., 0., 0., 0.3),
+        }
+    }
+}
+
+#[derive(Component, Debug)]
+pub struct WithOverlay {
+    pub texture: Handle<Image>,
+    pub overlay: Option<Entity>,
+    pub on_drag: bool,
+}
+
+impl WithOverlay {
+    pub fn new(texture: Handle<Image>) -> Self {
+        Self {
+            texture,
+            overlay: None,
+            on_drag: false,
+        }
+    }
+
+    pub fn only_on_drag(mut self) -> Self {
+        self.on_drag = true;
+        return self;
+    }
+}
+
+#[derive(Component, Debug)]
+pub struct Table;
+
+#[derive(Component, Debug)]
+pub struct TablePlayableArea;
+
+#[derive(Component, Debug)]
+pub struct OverlayOnDrag;
+
+#[derive(Component, Debug)]
+pub struct HighlightOverlay;
+
+#[derive(Component, Debug)]
 pub struct PlayerHandArea;
 
 #[derive(Component, Debug)]
-pub struct PlayerHandSlot;
+pub struct OpponentHandArea;
 
 #[derive(Component, Debug)]
-pub struct PlayerCard(pub UiCard);
+pub struct PlayerCardSlot;
 
 #[derive(Component, Debug)]
-pub struct SelectedCard;
+pub struct OpponentCardSlot;
 
 #[derive(Component, Debug)]
-pub struct RemovedCardSelection;
+pub struct PlayerTakenPile;
 
 #[derive(Component, Debug)]
-pub struct CardImage;
+pub struct OpponentTakenPile;
+
+#[derive(Component, Debug)]
+pub struct PlayerName;
+
+#[derive(Component, Debug)]
+pub struct OpponentName;
 
 #[derive(Component, Debug)]
 pub struct GameButton;
@@ -37,41 +132,6 @@ pub struct HighlightImage;
 
 #[derive(Component, Debug)]
 pub struct SoundEffect;
-
-#[derive(Component, Debug)]
-pub struct TableArea;
-
-#[derive(Component, Debug)]
-pub struct TableSlot;
-
-#[derive(Component, Debug)]
-pub struct TableCard;
-
-#[derive(Component, Debug)]
-pub struct Draggable;
-
-#[derive(Component, Debug)]
-pub struct Dragged {
-    previous_parent: Entity,
-}
-
-impl Dragged {
-    pub fn leaving(parent: Entity) -> Self {
-        Self {
-            previous_parent: parent,
-        }
-    }
-
-    pub fn return_to(&self) -> Entity {
-        self.previous_parent
-    }
-}
-
-#[derive(Component, Debug)]
-pub struct DropIn;
-
-#[derive(Component, Debug)]
-pub struct CursorMarker;
 
 #[derive(Debug, Clone, Copy)]
 pub struct UiCard {

@@ -2,6 +2,7 @@ use crate::styles::*;
 use bevy::prelude::*;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[allow(unused)]
 pub enum PopUpLocation {
     Top,
     #[default]

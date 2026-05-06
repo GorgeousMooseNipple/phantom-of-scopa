@@ -1,6 +1,5 @@
-use crate::config::{Config, CONFIG_PATH};
-use crate::error::Result;
-use crate::popups::{PopUpEvent, PopUpLocation};
+use crate::config::Config;
+use crate::popups::PopUpEvent;
 use crate::styles::*;
 use crate::AppState;
 
@@ -13,7 +12,7 @@ pub fn setup_startup(
     mut commands: Commands,
     mut popup_event: EventWriter<PopUpEvent>,
     mut app_state: ResMut<NextState<AppState>>,
-    asset_server: Res<AssetServer>,
+    font: Res<DefaultFont>,
 ) {
     let root = commands
         .spawn((
@@ -50,7 +49,7 @@ pub fn setup_startup(
             },
         ))
         .with_children(|parent| {
-            parent.spawn((StartUpUI, game_title(&asset_server)));
+            parent.spawn((StartUpUI, game_title(&font.font)));
         })
         .set_parent(root);
 
@@ -98,7 +97,7 @@ pub fn setup_startup(
                                 margin: UiRect::bottom(Val::Px(10.0)),
                                 ..default()
                             },
-                            text: default_text("Input username:", &asset_server),
+                            text: default_text("Input username:", &font.font),
                             ..default()
                         },
                     ));
@@ -116,7 +115,7 @@ pub fn setup_startup(
                             ..default()
                         },
                         TextInputBundle::default().with_text_style(TextStyle {
-                            font: asset_server.load(DEFAULT_FONT),
+                            font: font.font.clone(),
                             font_size: INPUT_FONT_SIZE,
                             color: Color::BLACK,
                         }),

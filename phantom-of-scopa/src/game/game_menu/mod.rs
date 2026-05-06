@@ -44,7 +44,6 @@ pub fn game_menu_plugin(app: &mut App) {
             OnEnter(InGameMenuState::Settings),
             create_settings_in_game_menu,
         )
-        // .add_systems(Update, (highlight_buttons).in_set(InGameMenuSet))
         .add_systems(Update, (open_settings, main_menu).in_set(RootInGameMenuSet))
         .add_systems(
             Update,
