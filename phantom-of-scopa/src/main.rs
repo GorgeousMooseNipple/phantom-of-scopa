@@ -55,6 +55,7 @@ fn main() {
 
     app.init_state::<AppState>()
         .add_event::<PopUpEvent>()
+        .add_event::<events::PlayAudio>()
         .add_systems(Startup, setup)
         .add_systems(Update, highlight_buttons)
         .add_systems(Update, spawn_audio)
@@ -98,6 +99,7 @@ pub fn spawn_audio(
         #[allow(unreachable_patterns)]
         let asset_path = match event {
             events::PlayAudio::DrawHand => "audio/Card_Deal02.ogg",
+            events::PlayAudio::PutCard => "audio/Card_place02.ogg",
             _ => {
                 unimplemented!("Unimplemented PlayAudio event")
             }

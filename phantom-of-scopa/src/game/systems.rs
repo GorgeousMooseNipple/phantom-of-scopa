@@ -27,6 +27,17 @@ pub fn game_setup(
     default_font: Res<DefaultFont>,
     config: Res<Config>,
 ) {
+    let sound_asset = asset_server.load("audio/Card_place02.ogg");
+    commands.spawn(AudioBundle {
+        source: sound_asset,
+        settings: PlaybackSettings {
+            mode: bevy::audio::PlaybackMode::Once,
+            volume: bevy::audio::Volume::new(0.5),
+            spatial: false,
+            paused: false,
+            ..default()
+        },
+    });
     // Table background image
     let mut table = commands.spawn((InGameComponent, Table, Name::new("Main table sprite")));
     let table_bg: Handle<Image> = asset_server.load("table.png");
@@ -114,9 +125,7 @@ pub fn game_setup(
         },
         WithOverlay::new(button_overlay.clone()),
         PickableBundle::default(),
-        On::<Pointer<Click>>::run(|| {
-            println!("Put button clicked");
-        }),
+        On::<Pointer<Click>>::run(put_button_click),
     ));
 
     // Player's taken pile
@@ -187,8 +196,8 @@ fn add_table_card_slot(table_area: &mut ChildBuilder, row: usize, column: usize)
         TABLE_BORDER_W + (TABLE_SLOT_W + TABLE_BORDER_W) * column as f32 + (TABLE_SLOT_W / 2.)
             - (TABLE_WIDTH / 2.);
     let slot_y =
-        TABLE_BORDER_W + (TABLE_SLOT_H + TABLE_BORDER_W) * row as f32 + (TABLE_SLOT_H / 2.)
-            - (TABLE_HEIGHT / 2.);
+        -(TABLE_BORDER_W + (TABLE_SLOT_H + TABLE_BORDER_W) * row as f32 + (TABLE_SLOT_H / 2.)
+            - (TABLE_HEIGHT / 2.));
     table_area
         .spawn((
             Name::new(format!("Table card slot at {}, {}", row, column)),
@@ -212,19 +221,17 @@ fn create_table_slots(mut table_area: EntityCommands) {
         table_slots.push(add_table_card_slot(table, 0, 1)); // 1
         table_slots.push(add_table_card_slot(table, 0, 2)); // 5
         table_slots.push(add_table_card_slot(table, 0, 3)); // 4
-        table_slots.push(add_table_card_slot(table, 0, 4)); // 9
-        table_slots.push(add_table_card_slot(table, 1, 0)); // 10
+        table_slots.push(add_table_card_slot(table, 0, 4)); // 10
+        table_slots.push(add_table_card_slot(table, 1, 0)); // 9
         table_slots.push(add_table_card_slot(table, 1, 1)); // 3
         table_slots.push(add_table_card_slot(table, 1, 2)); // 6
         table_slots.push(add_table_card_slot(table, 1, 3)); // 2
         table_slots.push(add_table_card_slot(table, 1, 4)); // 8
     });
 
-    let slot_priorities = [1, 8, 6, 3, 2, 7, 0, 9, 4, 5];
+    let slot_priorities = [1, 8, 6, 3, 2, 7, 0, 9, 5, 4];
     let ordered_slots: Vec<Entity> = slot_priorities.iter().map(|&i| table_slots[i]).collect();
 
-    println!("Table slots: {:?}", table_slots);
-    println!("Table slots order: {:?}", ordered_slots);
     table_area.insert(TableSlotsOrder {
         slots: ordered_slots,
     });
@@ -369,6 +376,13 @@ pub fn take_button_click(
     });
 }
 
+pub fn put_button_click(mut put_events: EventWriter<PutCardEvent>) {
+    let mut deck = card::Deck::default();
+    deck.shuffle();
+    let random_card = deck.deal_hand()[0];
+    put_events.send(PutCardEvent { card: random_card });
+}
+
 pub fn on_draw_hand(
     mut commands: Commands,
     mut events: EventReader<DrawEvent>,
@@ -414,13 +428,89 @@ pub fn on_draw_hand(
                         visibility: Visibility::Visible,
                         ..default()
                     },
-                    PickableBundle::default(),
+                    PickableBundle {
+                        pickable: Pickable {
+                            should_block_lower: false,
+                            ..default()
+                        },
+                        ..default()
+                    },
                     Animator::new(sequence),
                 ));
             });
             // .insert(OccupiedSlot);
         }
         audio_events.send(PlayAudio::DrawHand);
+    }
+}
+
+pub fn on_put_event(
+    mut commands: Commands,
+    mut events: EventReader<PutCardEvent>,
+    mut popups: EventWriter<PopUpEvent>,
+    mut audio_events: EventWriter<PlayAudio>,
+    occupied_slots: Query<Entity, (With<TableCardSlot>, With<OccupiedSlot>)>,
+    slots_order: Query<&TableSlotsOrder, With<TablePlayableArea>>,
+    asset_server: Res<AssetServer>,
+) {
+    for event in events.read() {
+        let card = event.card;
+        let ui_card = UiCard::new(card.clone());
+        let card_image: Handle<Image> = asset_server.load_with_settings(
+            ui_card.asset_path(),
+            |settings: &mut ImageLoaderSettings| settings.sampler = ImageSampler::nearest(),
+        );
+
+        if let Ok(slots_order) = slots_order.get_single() {
+            let target_slot = slots_order
+                .slots
+                .iter()
+                .find(|&&slot| !occupied_slots.contains(slot))
+                .copied();
+
+            let Some(target_slot_entity) = target_slot else {
+                popups.send(PopUpEvent {
+                    text: "The table is full!".into(),
+                    ..default()
+                });
+                continue;
+            };
+
+            commands
+                .entity(target_slot_entity)
+                .with_children(|slot| {
+                    slot.spawn((
+                        Name::new(format!("Card: {}", &card)),
+                        InGameComponent,
+                        TableCard { card: card },
+                        AtSlot {
+                            slot: target_slot_entity,
+                        },
+                        SpriteBundle {
+                            texture: card_image,
+                            transform: Transform::from_xyz(0., 0., 1.0),
+                            visibility: Visibility::Visible,
+                            ..default()
+                        },
+                        PickableBundle {
+                            pickable: Pickable {
+                                should_block_lower: false,
+                                ..default()
+                            },
+                            ..default()
+                        },
+                    ));
+                })
+                .insert(OccupiedSlot);
+
+            audio_events.send(PlayAudio::PutCard);
+        } else {
+            popups.send(PopUpEvent {
+                text: "Failed to get table slots order".into(),
+                ..default()
+            });
+            continue;
+        };
     }
 }
 

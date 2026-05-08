@@ -7,6 +7,12 @@ pub struct DrawEvent {
 }
 
 #[derive(Event)]
+pub struct PutCardEvent {
+    pub card: card::Card,
+}
+
+#[derive(Event)]
 pub enum PlayAudio {
     DrawHand,
+    PutCard,
 }
