@@ -107,6 +107,14 @@ pub struct PlayerCardSlot;
 pub struct OpponentCardSlot;
 
 #[derive(Component, Debug)]
+pub struct TableCardSlot;
+
+#[derive(Component, Debug)]
+pub struct TableSlotsOrder {
+    pub slots: Vec<Entity>,
+}
+
+#[derive(Component, Debug)]
 pub struct OccupiedSlot;
 
 #[derive(Component, Debug)]
@@ -120,6 +128,11 @@ pub struct OpponentCard;
 #[derive(Component, Debug)]
 pub struct TableCard {
     pub card: Card,
+}
+
+#[derive(Component, Debug)]
+pub struct AtSlot {
+    pub slot: Entity,
 }
 
 #[derive(Component, Debug)]

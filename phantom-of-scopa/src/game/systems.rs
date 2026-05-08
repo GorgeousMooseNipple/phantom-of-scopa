@@ -7,6 +7,7 @@ use crate::error::{BaseError, Result};
 use crate::events::*;
 use crate::popups::*;
 use crate::styles::*;
+use bevy::ecs::system::EntityCommands;
 use bevy::render::texture::ImageLoaderSettings;
 use bevy::render::texture::ImageSampler;
 use scopa_lib::card;
@@ -46,6 +47,8 @@ pub fn game_setup(
         PickableBundle::default(),
         Transform::from_xyz(0., 0., AREA_LAYER),
     ));
+
+    create_table_slots(playable_area);
 
     // Hand area
     let players_hand_area = commands
@@ -171,11 +174,60 @@ fn add_hand_card_slot<S: Component>(mut hand: &mut ChildBuilder, index: usize, s
         (CARD_SLOT_W + HAND_CARDS_SPACING) * index as f32 + (CARD_SLOT_W / 2.) - (HAND_WIDTH / 2.);
     let slot_y = 0.;
     hand.spawn((
+        InGameComponent,
         slot_component,
         Transform::from_xyz(slot_x, slot_y, 1.),
         GlobalTransform::default(),
         Visibility::Visible,
     ));
+}
+
+fn add_table_card_slot(table_area: &mut ChildBuilder, row: usize, column: usize) -> Entity {
+    let slot_x =
+        TABLE_BORDER_W + (TABLE_SLOT_W + TABLE_BORDER_W) * column as f32 + (TABLE_SLOT_W / 2.)
+            - (TABLE_WIDTH / 2.);
+    let slot_y =
+        TABLE_BORDER_W + (TABLE_SLOT_H + TABLE_BORDER_W) * row as f32 + (TABLE_SLOT_H / 2.)
+            - (TABLE_HEIGHT / 2.);
+    table_area
+        .spawn((
+            Name::new(format!("Table card slot at {}, {}", row, column)),
+            InGameComponent,
+            TableCardSlot,
+            Pickable {
+                is_hoverable: false,
+                should_block_lower: false,
+            },
+            Transform::from_xyz(slot_x.floor(), slot_y.floor(), 1.),
+            GlobalTransform::default(),
+            Visibility::Visible,
+        ))
+        .id()
+}
+
+fn create_table_slots(mut table_area: EntityCommands) {
+    let mut table_slots = Vec::<Entity>::with_capacity(10);
+    table_area.with_children(|table| {
+        table_slots.push(add_table_card_slot(table, 0, 0)); // 7
+        table_slots.push(add_table_card_slot(table, 0, 1)); // 1
+        table_slots.push(add_table_card_slot(table, 0, 2)); // 5
+        table_slots.push(add_table_card_slot(table, 0, 3)); // 4
+        table_slots.push(add_table_card_slot(table, 0, 4)); // 9
+        table_slots.push(add_table_card_slot(table, 1, 0)); // 10
+        table_slots.push(add_table_card_slot(table, 1, 1)); // 3
+        table_slots.push(add_table_card_slot(table, 1, 2)); // 6
+        table_slots.push(add_table_card_slot(table, 1, 3)); // 2
+        table_slots.push(add_table_card_slot(table, 1, 4)); // 8
+    });
+
+    let slot_priorities = [1, 8, 6, 3, 2, 7, 0, 9, 4, 5];
+    let ordered_slots: Vec<Entity> = slot_priorities.iter().map(|&i| table_slots[i]).collect();
+
+    println!("Table slots: {:?}", table_slots);
+    println!("Table slots order: {:?}", ordered_slots);
+    table_area.insert(TableSlotsOrder {
+        slots: ordered_slots,
+    });
 }
 
 pub fn debug_areas(
@@ -355,6 +407,7 @@ pub fn on_draw_hand(
                     Name::new(format!("Card: {}", &card)),
                     InGameComponent,
                     PlayerCard { card: *card },
+                    AtSlot { slot: slot_entity },
                     SpriteBundle {
                         texture: card_image,
                         transform: Transform::from_xyz(0., 0., 1.0).with_scale(Vec3::splat(0.01)),
