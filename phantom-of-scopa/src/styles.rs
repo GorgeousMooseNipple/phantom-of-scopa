@@ -52,6 +52,8 @@ pub const HOVERED_UI: Color = Color::rgba(0.85, 0.82, 0.16, 1.0);
 pub const SELECTED_UI: Color = Color::rgba(0.85, 0.82, 0.16, 1.0);
 // pub const SELECTED_UI: Color = Color::rgba(0.38, 0.02, 0.03, 1.0);
 pub const HOVERED_SELECTED_UI: Color = Color::rgba(0.77, 0.74, 0.10, 1.0);
+pub const DEFAULT_TINT: Color = Color::WHITE;
+pub const SELECTION_TINT: Color = Color::rgba(1.0, 0.3, 0.3, 1.0);
 
 // Fonts
 pub const DEFAULT_FONT: &str = "fonts/DroidSerif-Regular.ttf";

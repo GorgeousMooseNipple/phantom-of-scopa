@@ -136,6 +136,9 @@ pub struct AtSlot {
 }
 
 #[derive(Component, Debug)]
+pub struct SelectedCard;
+
+#[derive(Component, Debug)]
 pub struct PlayerTakenPile;
 
 #[derive(Component, Debug)]

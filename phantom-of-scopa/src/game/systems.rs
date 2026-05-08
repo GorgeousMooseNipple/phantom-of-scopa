@@ -414,11 +414,66 @@ pub fn on_draw_hand(
                         visibility: Visibility::Visible,
                         ..default()
                     },
+                    PickableBundle::default(),
                     Animator::new(sequence),
                 ));
             });
             // .insert(OccupiedSlot);
         }
         audio_events.send(PlayAudio::DrawHand);
+    }
+}
+
+pub fn card_selection(
+    mut commands: Commands,
+    mut clicks: EventReader<Pointer<Click>>,
+    hand_cards: Query<Entity, With<PlayerCard>>,
+    table_cards: Query<Entity, With<TableCard>>,
+    selected: Query<Entity, With<SelectedCard>>,
+) {
+    for click in clicks.read() {
+        let clicked = click.target();
+        let in_hand = hand_cards.contains(clicked);
+        let on_table = table_cards.contains(clicked);
+
+        if !in_hand && !on_table {
+            continue;
+        }
+
+        let already_selected = selected.contains(clicked);
+        if already_selected {
+            commands.entity(clicked).remove::<SelectedCard>();
+            continue;
+        }
+        if in_hand {
+            for card in hand_cards.iter() {
+                if selected.contains(card) {
+                    commands.entity(card).remove::<SelectedCard>();
+                }
+            }
+            commands.entity(clicked).insert(SelectedCard);
+        } else if on_table {
+            commands.entity(clicked).insert(SelectedCard);
+        }
+    }
+}
+
+pub fn selection_visuals(
+    mut selected_cards: Query<&mut Sprite, Added<SelectedCard>>,
+    mut unselected_cards: Query<
+        &mut Sprite,
+        (
+            Without<SelectedCard>,
+            Or<(With<PlayerCard>, With<TableCard>)>,
+        ),
+    >,
+) {
+    for mut sprite in selected_cards.iter_mut() {
+        sprite.color = SELECTION_TINT;
+    }
+    for mut sprite in unselected_cards.iter_mut() {
+        if sprite.color != DEFAULT_TINT {
+            sprite.color = DEFAULT_TINT;
+        }
     }
 }
