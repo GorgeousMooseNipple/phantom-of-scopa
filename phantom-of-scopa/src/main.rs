@@ -13,6 +13,7 @@ use bevy::prelude::*;
 use bevy::window::{PresentMode, WindowTheme};
 use bevy_mod_picking::DefaultPickingPlugins;
 use bevy_simple_text_input::TextInputPlugin;
+use bevy_tweening::TweeningPlugin;
 
 #[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]
 enum AppState {
@@ -41,7 +42,8 @@ fn main() {
         ..default()
     }))
     .add_plugins(DefaultPickingPlugins)
-    .add_plugins(TextInputPlugin);
+    .add_plugins(TextInputPlugin)
+    .add_plugins(TweeningPlugin);
 
     let asset_server = app.world.resource::<AssetServer>();
     app.insert_resource(DefaultFont {

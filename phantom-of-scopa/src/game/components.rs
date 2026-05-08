@@ -107,6 +107,22 @@ pub struct PlayerCardSlot;
 pub struct OpponentCardSlot;
 
 #[derive(Component, Debug)]
+pub struct OccupiedSlot;
+
+#[derive(Component, Debug)]
+pub struct PlayerCard {
+    pub card: Card,
+}
+
+#[derive(Component, Debug)]
+pub struct OpponentCard;
+
+#[derive(Component, Debug)]
+pub struct TableCard {
+    pub card: Card,
+}
+
+#[derive(Component, Debug)]
 pub struct PlayerTakenPile;
 
 #[derive(Component, Debug)]

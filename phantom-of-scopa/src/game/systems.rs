@@ -12,12 +12,20 @@ use scopa_lib::event::GameEvent;
 use bevy::audio::Volume;
 use bevy::prelude::*;
 use bevy_mod_picking::prelude::*;
+use bevy_tweening::lens::TransformScaleLens;
+use bevy_tweening::{Animator, Delay, EaseFunction, Sequence, Tween};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
+use std::time::Duration;
 
 #[derive(Event)]
-pub enum ScopaEvent {
-    NewHand(Vec<card::Card>),
+pub struct DrawEvent {
+    hand: Vec<card::Card>,
+}
+
+#[derive(Event)]
+pub enum PlayAudio {
+    DrawHand,
 }
 
 pub fn game_setup(
@@ -293,22 +301,6 @@ pub fn hide_overlay_on_cursor_out(
     }
 }
 
-fn play_audio(asset: Handle<AudioSource>, volume: f32, commands: &mut Commands) {
-    commands.spawn((
-        SoundEffect,
-        AudioBundle {
-            source: asset,
-            settings: PlaybackSettings {
-                mode: bevy::audio::PlaybackMode::Once,
-                volume: Volume::new(volume),
-                paused: false,
-                spatial: false,
-                ..default()
-            },
-        },
-    ));
-}
-
 pub fn toggle_in_game_menu(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     cur_state: Res<State<GameState>>,
@@ -328,8 +320,98 @@ pub fn hide_overlays(mut overlays: Query<&mut Visibility, With<HighlightOverlay>
     }
 }
 
-pub fn take_button_click(take_btn_q: Query<Entity, With<TakeButton>>) {
-    println!("Take button is pressed");
+pub fn take_button_click(
+    take_btn_q: Query<Entity, With<TakeButton>>,
+    mut draw_events: EventWriter<DrawEvent>,
+) {
     let entity = take_btn_q.get_single().unwrap();
-    println!("Take button entity: {:?}", entity);
+    let mut deck = card::Deck::default();
+    deck.shuffle();
+    let random_hand = deck.deal_hand();
+    draw_events.send(DrawEvent {
+        hand: Vec::from(random_hand),
+    });
+}
+
+pub fn on_draw_hand(
+    mut commands: Commands,
+    mut events: EventReader<DrawEvent>,
+    mut popups: EventWriter<PopUpEvent>,
+    mut audio_events: EventWriter<PlayAudio>,
+    slots: Query<Entity, (With<PlayerCardSlot>, Without<OccupiedSlot>)>,
+    asset_server: Res<AssetServer>,
+) {
+    let available_slots: Vec<Entity> = slots.iter().collect();
+    for event in events.read() {
+        if event.hand.len() > available_slots.len() {
+            popups.send(PopUpEvent {
+                text: "Tried to draw hand, but available slots are missing".into(),
+                ..default()
+            });
+            return;
+        }
+        for (i, card) in event.hand.iter().enumerate() {
+            let &slot_entity = &available_slots[i];
+            let ui_card = UiCard::new(card.clone());
+            let card_image = asset_server.load(ui_card.asset_path());
+            let tween = Tween::new(
+                EaseFunction::CubicOut,
+                Duration::from_millis(250),
+                TransformScaleLens {
+                    start: Vec3::splat(0.01),
+                    end: Vec3::ONE,
+                },
+            );
+            let sequence = Delay::new(Duration::from_millis(100 * i as u64 + 1)).then(tween);
+            commands.entity(slot_entity).with_children(|slot| {
+                slot.spawn((
+                    PlayerCard { card: *card },
+                    SpriteBundle {
+                        texture: card_image,
+                        transform: Transform::from_xyz(0., 0., 1.0).with_scale(Vec3::splat(0.01)),
+                        visibility: Visibility::Visible,
+                        ..default()
+                    },
+                    Animator::new(sequence),
+                ));
+            });
+            // .insert(OccupiedSlot);
+        }
+        audio_events.send(PlayAudio::DrawHand);
+    }
+}
+
+pub fn spawn_audio(
+    mut commands: Commands,
+    mut audio_events: EventReader<PlayAudio>,
+    asset_server: Res<AssetServer>,
+    config: Res<Config>,
+) {
+    for event in audio_events.read() {
+        let asset_path = match event {
+            PlayAudio::DrawHand => "audio/Card_Deal02.ogg",
+            _ => {
+                unimplemented!("Unimplemented PlayAudio event")
+            }
+        };
+        let asset = asset_server.load(asset_path);
+        if !asset_server.is_loaded_with_dependencies(&asset) {
+            println!("Asset loading problem");
+        }
+        let volume = config.volume_as_f32();
+        println!(
+            "Playing audio asset '{}' with volume {}",
+            asset_path, volume
+        );
+        commands.spawn(AudioBundle {
+            source: asset,
+            settings: PlaybackSettings {
+                mode: bevy::audio::PlaybackMode::Despawn,
+                volume: Volume::new(volume),
+                spatial: false,
+                paused: false,
+                ..default()
+            },
+        });
+    }
 }

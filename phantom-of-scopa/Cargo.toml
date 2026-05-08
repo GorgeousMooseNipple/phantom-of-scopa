@@ -10,6 +10,7 @@ bevy = "0.13.2"
 bevy_mod_picking = "0.19"
 bevy_renet = "0.0.10"
 bevy_simple_text_input = "0.5.1"
+bevy_tweening = "0.10"
 rand = "0.8.6"
 renet = "0.0.14"
 scopa-lib = { path = "../scopa-lib/" }
