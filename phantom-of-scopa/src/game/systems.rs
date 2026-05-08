@@ -49,7 +49,6 @@ pub fn game_setup(
         Name::new("Playable area on the table"),
         InGameComponent,
         TablePlayableArea,
-        DebugSprite::with_color(Color::ORANGE),
         LogicalArea::with_size(Vec2::new(TABLE_WIDTH, TABLE_HEIGHT)),
         WithOverlay::new(playable_area_overlay),
         PickableBundle::default(),
@@ -62,7 +61,6 @@ pub fn game_setup(
             Name::new("Player's hand area"),
             InGameComponent,
             PlayerHandArea,
-            DebugSprite::with_color(Color::BLUE),
             LogicalArea::with_size(Vec2::new(HAND_WIDTH, HAND_HEIGHT)),
             Transform::from_xyz(PLAYER_HAND_X, PLAYER_HAND_Y, ON_TABLE_LAYER),
         ))
@@ -78,7 +76,6 @@ pub fn game_setup(
             Name::new("Opponent's hand area"),
             InGameComponent,
             OpponentHandArea,
-            DebugSprite::with_color(Color::RED),
             LogicalArea::with_size(Vec2::new(HAND_WIDTH, HAND_HEIGHT)),
             Transform::from_xyz(PLAYER_HAND_X, -PLAYER_HAND_Y, ON_TABLE_LAYER),
         ))
@@ -185,7 +182,7 @@ fn add_hand_card_slot<S: Component>(mut hand: &mut ChildBuilder, index: usize, s
         slot_component,
         SpriteBundle {
             sprite: Sprite {
-                color: Color::BLACK,
+                color: Color::NONE,
                 custom_size: Some(Vec2::new(CARD_W, CARD_H)),
                 ..default()
             },
@@ -395,9 +392,6 @@ pub fn spawn_audio(
             }
         };
         let asset = asset_server.load(asset_path);
-        if !asset_server.is_loaded_with_dependencies(&asset) {
-            println!("Asset loading problem");
-        }
         let volume = config.volume_as_f32();
         println!(
             "Playing audio asset '{}' with volume {}",
