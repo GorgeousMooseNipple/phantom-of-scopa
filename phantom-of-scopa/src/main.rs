@@ -4,11 +4,13 @@ mod events;
 mod game;
 mod menu;
 mod popups;
+mod resources;
 mod startup;
 mod styles;
 
 use config::Config;
 use popups::*;
+use resources::*;
 use styles::*;
 
 use bevy::audio::Volume;
@@ -48,10 +50,7 @@ fn main() {
     .add_plugins(TextInputPlugin)
     .add_plugins(TweeningPlugin);
 
-    let asset_server = app.world.resource::<AssetServer>();
-    app.insert_resource(DefaultFont {
-        font: asset_server.load(DEFAULT_FONT),
-    });
+    setup_resources(&mut app);
 
     app.init_state::<AppState>()
         .add_event::<PopUpEvent>()
@@ -68,6 +67,18 @@ fn main() {
 
 fn setup(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
+}
+
+fn setup_resources(app: &mut App) {
+    let asset_server = app.world.resource::<AssetServer>();
+    app.insert_resource(DefaultFont {
+        font: asset_server.load(DEFAULT_FONT),
+    });
+    let asset_server = app.world.resource::<AssetServer>();
+    app.insert_resource(OneShotAudio {
+        card_draw: asset_server.load("audio/Card_Deal02.ogg"),
+        card_put: asset_server.load("audio/Card_place02.ogg"),
+    });
 }
 
 #[allow(clippy::type_complexity)]
@@ -92,23 +103,20 @@ fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut commands
 pub fn spawn_audio(
     mut commands: Commands,
     mut audio_events: EventReader<events::PlayAudio>,
-    asset_server: Res<AssetServer>,
+    one_shot: Res<OneShotAudio>,
     config: Res<Config>,
 ) {
     for event in audio_events.read() {
         #[allow(unreachable_patterns)]
-        let asset_path = match event {
-            events::PlayAudio::DrawHand => "audio/Card_Deal02.ogg",
-            events::PlayAudio::PutCard => "audio/Card_place02.ogg",
-            _ => {
-                unimplemented!("Unimplemented PlayAudio event")
-            }
+        let asset = match event {
+            events::PlayAudio::DrawHand => one_shot.card_draw.clone(),
+            events::PlayAudio::PutCard => one_shot.card_put.clone(),
         };
-        let asset = asset_server.load(asset_path);
         let volume = config.volume_as_f32();
         println!(
-            "Playing audio asset '{}' with volume {}",
-            asset_path, volume
+            "Playing audio asset '{:?}' with volume {}",
+            asset.path(),
+            volume
         );
         commands.spawn(AudioBundle {
             source: asset,
