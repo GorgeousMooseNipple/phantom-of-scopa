@@ -6,6 +6,8 @@ use crate::config::Config;
 use crate::error::{BaseError, Result};
 use crate::popups::*;
 use crate::styles::*;
+use bevy::render::texture::ImageLoaderSettings;
+use bevy::render::texture::ImageSampler;
 use scopa_lib::card;
 use scopa_lib::event::GameEvent;
 
@@ -180,16 +182,9 @@ fn add_hand_card_slot<S: Component>(mut hand: &mut ChildBuilder, index: usize, s
     let slot_y = 0.;
     hand.spawn((
         slot_component,
-        SpriteBundle {
-            sprite: Sprite {
-                color: Color::NONE,
-                custom_size: Some(Vec2::new(CARD_W, CARD_H)),
-                ..default()
-            },
-            transform: Transform::from_xyz(slot_x, slot_y, 1.),
-            visibility: Visibility::Visible,
-            ..default()
-        },
+        Transform::from_xyz(slot_x, slot_y, 1.),
+        GlobalTransform::default(),
+        Visibility::Visible,
     ));
 }
 
@@ -209,6 +204,7 @@ pub fn debug_areas(
             println!("Spawning debug sprite for '{}'", name_str);
             parent.spawn((
                 Name::new(format!("Debug sprite for '{}'", name_str)),
+                InGameComponent,
                 SpriteBundle {
                     sprite: Sprite {
                         color: debug_sprite.color.with_a(debug_sprite.alpha),
@@ -246,6 +242,7 @@ pub fn attach_overlays(
         println!("Spawning highlight overlay for '{}'", name_str);
         let mut overlay_child = commands.spawn((
             Name::new(format!("Highlight overlay for '{}'", name_str)),
+            InGameComponent,
             HighlightOverlay,
             SpriteBundle {
                 texture: overlay.texture.clone(),
@@ -350,7 +347,10 @@ pub fn on_draw_hand(
         for (i, card) in event.hand.iter().enumerate() {
             let &slot_entity = &available_slots[i];
             let ui_card = UiCard::new(card.clone());
-            let card_image = asset_server.load(ui_card.asset_path());
+            let card_image = asset_server.load_with_settings(
+                ui_card.asset_path(),
+                |settings: &mut ImageLoaderSettings| settings.sampler = ImageSampler::nearest(),
+            );
             let tween = Tween::new(
                 EaseFunction::CubicOut,
                 Duration::from_millis(250),
@@ -362,6 +362,8 @@ pub fn on_draw_hand(
             let sequence = Delay::new(Duration::from_millis(100 * i as u64 + 1)).then(tween);
             commands.entity(slot_entity).with_children(|slot| {
                 slot.spawn((
+                    Name::new(format!("Card: {}", &card)),
+                    InGameComponent,
                     PlayerCard { card: *card },
                     SpriteBundle {
                         texture: card_image,
