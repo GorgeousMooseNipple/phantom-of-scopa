@@ -1,14 +1,17 @@
 mod config;
 mod error;
+mod events;
 mod game;
 mod menu;
 mod popups;
 mod startup;
 mod styles;
 
+use config::Config;
 use popups::*;
 use styles::*;
 
+use bevy::audio::Volume;
 use bevy::prelude::*;
 use bevy::window::{PresentMode, WindowTheme};
 use bevy_mod_picking::DefaultPickingPlugins;
@@ -54,6 +57,7 @@ fn main() {
         .add_event::<PopUpEvent>()
         .add_systems(Startup, setup)
         .add_systems(Update, highlight_buttons)
+        .add_systems(Update, spawn_audio)
         .add_systems(Update, (handle_popups, clear_expired_popups))
         .add_plugins(startup::startup_plugin)
         .add_plugins(menu::menu_plugin)
@@ -81,5 +85,38 @@ pub fn highlight_buttons(
 fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut commands: Commands) {
     for entity in to_despawn.iter() {
         commands.entity(entity).despawn_recursive();
+    }
+}
+
+pub fn spawn_audio(
+    mut commands: Commands,
+    mut audio_events: EventReader<events::PlayAudio>,
+    asset_server: Res<AssetServer>,
+    config: Res<Config>,
+) {
+    for event in audio_events.read() {
+        #[allow(unreachable_patterns)]
+        let asset_path = match event {
+            events::PlayAudio::DrawHand => "audio/Card_Deal02.ogg",
+            _ => {
+                unimplemented!("Unimplemented PlayAudio event")
+            }
+        };
+        let asset = asset_server.load(asset_path);
+        let volume = config.volume_as_f32();
+        println!(
+            "Playing audio asset '{}' with volume {}",
+            asset_path, volume
+        );
+        commands.spawn(AudioBundle {
+            source: asset,
+            settings: PlaybackSettings {
+                mode: bevy::audio::PlaybackMode::Despawn,
+                volume: Volume::new(volume),
+                spatial: false,
+                paused: false,
+                ..default()
+            },
+        });
     }
 }

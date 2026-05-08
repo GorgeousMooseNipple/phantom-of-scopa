@@ -4,6 +4,7 @@ use super::resources::*;
 use super::GameState;
 use crate::config::Config;
 use crate::error::{BaseError, Result};
+use crate::events::*;
 use crate::popups::*;
 use crate::styles::*;
 use bevy::render::texture::ImageLoaderSettings;
@@ -11,7 +12,6 @@ use bevy::render::texture::ImageSampler;
 use scopa_lib::card;
 use scopa_lib::event::GameEvent;
 
-use bevy::audio::Volume;
 use bevy::prelude::*;
 use bevy_mod_picking::prelude::*;
 use bevy_tweening::lens::TransformScaleLens;
@@ -19,16 +19,6 @@ use bevy_tweening::{Animator, Delay, EaseFunction, Sequence, Tween};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use std::time::Duration;
-
-#[derive(Event)]
-pub struct DrawEvent {
-    hand: Vec<card::Card>,
-}
-
-#[derive(Event)]
-pub enum PlayAudio {
-    DrawHand,
-}
 
 pub fn game_setup(
     mut commands: Commands,
@@ -377,37 +367,5 @@ pub fn on_draw_hand(
             // .insert(OccupiedSlot);
         }
         audio_events.send(PlayAudio::DrawHand);
-    }
-}
-
-pub fn spawn_audio(
-    mut commands: Commands,
-    mut audio_events: EventReader<PlayAudio>,
-    asset_server: Res<AssetServer>,
-    config: Res<Config>,
-) {
-    for event in audio_events.read() {
-        let asset_path = match event {
-            PlayAudio::DrawHand => "audio/Card_Deal02.ogg",
-            _ => {
-                unimplemented!("Unimplemented PlayAudio event")
-            }
-        };
-        let asset = asset_server.load(asset_path);
-        let volume = config.volume_as_f32();
-        println!(
-            "Playing audio asset '{}' with volume {}",
-            asset_path, volume
-        );
-        commands.spawn(AudioBundle {
-            source: asset,
-            settings: PlaybackSettings {
-                mode: bevy::audio::PlaybackMode::Despawn,
-                volume: Volume::new(volume),
-                spatial: false,
-                paused: false,
-                ..default()
-            },
-        });
     }
 }

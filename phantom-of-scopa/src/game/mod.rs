@@ -7,6 +7,7 @@ mod systems;
 use bevy::prelude::*;
 use components::InGameComponent;
 
+use crate::events::*;
 use crate::{despawn_screen, AppState};
 use systems::*;
 
@@ -58,7 +59,6 @@ pub fn game_plugin(app: &mut App) {
             ),
         )
         .add_systems(OnEnter(AppState::InGame), game_setup)
-        .add_systems(Update, spawn_audio)
         .add_systems(Update, debug_areas)
         .add_systems(Update, attach_overlays)
         .add_systems(
