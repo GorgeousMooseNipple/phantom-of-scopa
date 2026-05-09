@@ -27,17 +27,6 @@ pub fn game_setup(
     default_font: Res<DefaultFont>,
     config: Res<Config>,
 ) {
-    let sound_asset = asset_server.load("audio/Card_place02.ogg");
-    commands.spawn(AudioBundle {
-        source: sound_asset,
-        settings: PlaybackSettings {
-            mode: bevy::audio::PlaybackMode::Once,
-            volume: bevy::audio::Volume::new(0.5),
-            spatial: false,
-            paused: false,
-            ..default()
-        },
-    });
     // Table background image
     let mut table = commands.spawn((InGameComponent, Table, Name::new("Main table sprite")));
     let table_bg: Handle<Image> = asset_server.load("table.png");
@@ -133,7 +122,6 @@ pub fn game_setup(
         Name::new("Player's taken pile"),
         InGameComponent,
         PlayerTakenPile,
-        DebugSprite::with_color(Color::PINK),
         LogicalArea::with_size(Vec2::new(CARD_W, CARD_H)),
         Transform::from_xyz(PLAYER_TAKEN_PILE_X, PLAYER_TAKEN_PILE_Y, ON_TABLE_LAYER)
             .with_rotation(Quat::from_rotation_z(f32::to_radians(45.))),
@@ -144,7 +132,6 @@ pub fn game_setup(
         Name::new("Opponent's taken pile"),
         InGameComponent,
         PlayerTakenPile,
-        DebugSprite::with_color(Color::PURPLE),
         LogicalArea::with_size(Vec2::new(CARD_W, CARD_H)),
         Transform::from_xyz(OPPONENT_TAKEN_PILE_X, OPPONENT_TAKEN_PILE_Y, ON_TABLE_LAYER)
             .with_rotation(Quat::from_rotation_z(f32::to_radians(45.))),
@@ -172,7 +159,6 @@ pub fn game_setup(
         Name::new("Opponent's name"),
         InGameComponent,
         OpponentName,
-        DebugSprite::with_color(Color::GREEN),
         LogicalArea::with_size(Vec2::new(NAME_W, NAME_H)),
         Transform::from_xyz(OPPONENT_NAME_X, OPPONENT_NAME_Y, ON_TABLE_LAYER),
     ));
@@ -419,30 +405,33 @@ pub fn on_draw_hand(
                 },
             );
             let sequence = Delay::new(Duration::from_millis(100 * i as u64 + 1)).then(tween);
-            commands.entity(slot_entity).with_children(|slot| {
-                slot.spawn((
-                    Name::new(format!("Card: {}", &card)),
-                    InGameComponent,
-                    PlayerCard { card: *card },
-                    AtSlot { slot: slot_entity },
-                    Draggable,
-                    SpriteBundle {
-                        texture: card_image,
-                        transform: Transform::from_xyz(0., 0., 1.0).with_scale(Vec3::splat(0.01)),
-                        visibility: Visibility::Visible,
-                        ..default()
-                    },
-                    PickableBundle {
-                        pickable: Pickable {
-                            should_block_lower: false,
+            commands
+                .entity(slot_entity)
+                .with_children(|slot| {
+                    slot.spawn((
+                        Name::new(format!("Card: {}", &card)),
+                        InGameComponent,
+                        PlayerCard { card: *card },
+                        AtSlot { slot: slot_entity },
+                        Draggable,
+                        SpriteBundle {
+                            texture: card_image,
+                            transform: Transform::from_xyz(0., 0., 1.0)
+                                .with_scale(Vec3::splat(0.01)),
+                            visibility: Visibility::Visible,
                             ..default()
                         },
-                        ..default()
-                    },
-                    Animator::new(sequence),
-                ));
-            });
-            // .insert(OccupiedSlot);
+                        PickableBundle {
+                            pickable: Pickable {
+                                should_block_lower: false,
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        Animator::new(sequence),
+                    ));
+                })
+                .insert(OccupiedSlot);
         }
         audio_events.send(PlayAudio::DrawHand);
     }
@@ -572,17 +561,20 @@ pub fn selection_visuals(
     }
 }
 
-pub fn drag_start(
+pub fn drag_start_card(
     mut commands: Commands,
     mut events: EventReader<Pointer<DragStart>>,
-    mut draggable: Query<(Entity, &mut Transform), With<Draggable>>,
+    mut draggable: Query<(Entity, &mut Transform), (With<PlayerCard>, With<Draggable>)>,
     camera: Query<(&Camera, &GlobalTransform)>,
 ) {
     for event in events.read() {
         if let Ok((entity, mut transform)) = draggable.get_mut(event.target) {
-            commands.entity(entity).insert(Dragged {
-                orig_position: transform.translation,
-            });
+            commands
+                .entity(entity)
+                .insert(Dragged {
+                    orig_position: transform.translation,
+                })
+                .remove::<SelectedCard>();
             transform.translation.z = DRAG_LAYER;
             break;
         }
@@ -590,39 +582,95 @@ pub fn drag_start(
     events.clear();
 }
 
-pub fn drag_move(
+pub fn drag_card(
     mut events: EventReader<Pointer<Drag>>,
-    mut dragged: Query<&mut Transform, With<Dragged>>,
+    mut dragged: Query<&mut Transform, (With<PlayerCard>, With<Dragged>)>,
 ) {
-    let mut drag_delta = Vec2::ZERO;
     for drag in events.read() {
-        if dragged.contains(drag.target) {
-            drag_delta += drag.delta;
+        if let Ok(mut transform) = dragged.get_mut(drag.target) {
+            transform.translation.x += drag.delta.x;
+            transform.translation.y -= drag.delta.y;
         }
-    }
-
-    if drag_delta == Vec2::ZERO {
-        return;
-    }
-
-    if let Ok(mut transform) = dragged.get_single_mut() {
-        // println!("Dragging by {:?}", drag_delta);
-        transform.translation.x += drag_delta.x;
-        transform.translation.y -= drag_delta.y;
     }
 }
 
-pub fn drag_end(
+pub fn drop_card(
     mut commands: Commands,
-    mut events: EventReader<Pointer<DragEnd>>,
-    mut dragged: Query<(Entity, &mut Transform, &Dragged), With<Dragged>>,
+    mut drops: EventReader<Pointer<Drop>>,
+    mut dragged: Query<
+        (Entity, &mut Transform, &Dragged, &PlayerCard, &mut AtSlot),
+        (With<PlayerCard>, With<Dragged>),
+    >,
+    mut audio_events: EventWriter<PlayAudio>,
+    mut popups: EventWriter<PopUpEvent>,
+    occupied_slots: Query<Entity, (With<TableCardSlot>, With<OccupiedSlot>)>,
+    table_area: Query<&TableSlotsOrder, With<TablePlayableArea>>,
 ) {
-    for event in events.read() {
-        if let Ok((entity, mut transform, dragged)) = dragged.get_single_mut() {
-            transform.translation = dragged.orig_position;
-            commands.entity(entity).remove::<Dragged>();
-            break;
+    let Ok((dragged_entity, mut dragged_transform, dragged, card, mut dragged_slot)) =
+        dragged.get_single_mut()
+    else {
+        // We don't drag anything so return
+        return;
+    };
+    for drop in drops.read() {
+        if !table_area.contains(drop.target) {
+            // Dropped outside droppable area - snap back
+            dragged_transform.translation = dragged.orig_position;
+            commands.entity(dragged_entity).remove::<Dragged>();
+            continue;
+        } else {
+            // Drop on playable area on the table
+            let Ok(slots_order) = table_area.get_single() else {
+                popups.send(PopUpEvent {
+                    text: "Failed to get table slots order".into(),
+                    ..default()
+                });
+                continue;
+            };
+            let target_slot = slots_order
+                .slots
+                .iter()
+                .find(|&&slot| !occupied_slots.contains(slot))
+                .copied();
+            let Some(target_slot) = target_slot else {
+                // The table is full - snap back
+                dragged_transform.translation = dragged.orig_position;
+                commands.entity(dragged_entity).remove::<Dragged>();
+                popups.send(PopUpEvent {
+                    text: "The table is full!".into(),
+                    ..default()
+                });
+                continue;
+            };
+            commands
+                .entity(dragged_entity)
+                .remove::<Dragged>()
+                .remove::<PlayerCard>()
+                .insert(TableCard { card: card.card })
+                .set_parent(target_slot);
+            dragged_transform.translation = Vec3::new(0., 0., 1.0);
+            commands.entity(dragged_slot.slot).remove::<OccupiedSlot>();
+            dragged_slot.slot = target_slot;
+            commands.entity(target_slot).insert(OccupiedSlot);
+            audio_events.send(PlayAudio::PutCard);
         }
     }
-    events.clear();
+}
+
+// Fixes situation when we drop dragged entity onto itself
+// In this case Pointer<Click> is fired instead of Pointer<Drop>
+pub fn drop_card_self(
+    mut commands: Commands,
+    mut clicks: EventReader<Pointer<Click>>,
+    mut dragged: Query<(Entity, &mut Transform, &Dragged), (With<PlayerCard>, With<Dragged>)>,
+) {
+    if dragged.is_empty() {
+        return;
+    }
+    for click in clicks.read() {
+        if let Ok((entity, mut transform, dragged)) = dragged.get_mut(click.target) {
+            transform.translation = dragged.orig_position;
+            commands.entity(entity).remove::<Dragged>();
+        }
+    }
 }

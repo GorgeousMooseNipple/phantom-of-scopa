@@ -113,11 +113,6 @@ pub fn spawn_audio(
             events::PlayAudio::PutCard => one_shot.card_put.clone(),
         };
         let volume = config.volume_as_f32();
-        println!(
-            "Playing audio asset '{:?}' with volume {}",
-            asset.path(),
-            volume
-        );
         commands.spawn(AudioBundle {
             source: asset,
             settings: PlaybackSettings {

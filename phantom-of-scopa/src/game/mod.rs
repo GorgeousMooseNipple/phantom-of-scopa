@@ -71,7 +71,7 @@ pub fn game_plugin(app: &mut App) {
         )
         .add_systems(
             Update,
-            (drag_start, drag_move, drag_end)
+            (drag_start_card, drag_card, drop_card, drop_card_self)
                 .chain()
                 .in_set(DragAndDrop),
         )
