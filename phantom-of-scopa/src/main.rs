@@ -29,23 +29,29 @@ enum AppState {
 }
 
 fn main() {
+    setup_logging();
+
     let mut app = App::new();
-    app.add_plugins(DefaultPlugins.set(WindowPlugin {
-        primary_window: Some(Window {
-            title: "Phantom of Scopa".into(),
-            resolution: (800., 481.).into(),
-            present_mode: PresentMode::AutoVsync,
-            prevent_default_event_handling: false,
-            window_theme: Some(WindowTheme::Dark),
-            resizable: false,
-            enabled_buttons: bevy::window::EnabledButtons {
-                maximize: false,
-                ..Default::default()
-            },
-            ..default()
-        }),
-        ..default()
-    }))
+    app.add_plugins(
+        DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "Phantom of Scopa".into(),
+                    resolution: (800., 481.).into(),
+                    present_mode: PresentMode::AutoVsync,
+                    prevent_default_event_handling: false,
+                    window_theme: Some(WindowTheme::Dark),
+                    resizable: false,
+                    enabled_buttons: bevy::window::EnabledButtons {
+                        maximize: false,
+                        ..Default::default()
+                    },
+                    ..default()
+                }),
+                ..default()
+            })
+            .disable::<bevy::log::LogPlugin>(),
+    )
     .add_plugins(DefaultPickingPlugins)
     .add_plugins(TextInputPlugin)
     .add_plugins(TweeningPlugin);
@@ -63,6 +69,50 @@ fn main() {
         .add_plugins(menu::menu_plugin)
         .add_plugins(game::game_plugin)
         .run();
+}
+
+#[cfg(debug_assertions)]
+fn setup_logging() {
+    use tracing_subscriber::layer::SubscriberExt;
+    use tracing_subscriber::util::SubscriberInitExt;
+
+    let filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or("error,phantom_of_scopa=debug".into());
+
+    tracing_subscriber::Registry::default()
+        .with(filter)
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_file(true)
+                .with_line_number(true),
+        )
+        .init();
+}
+
+#[cfg(not(debug_assertions))]
+fn setup_logging() {
+    use tracing_appender::rolling;
+    use tracing_subscriber::layer::SubscriberExt;
+    use tracing_subscriber::util::SubscriberInitExt;
+
+    let file_appender = rolling::daily("logs", "phantom-of-scopa");
+    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+
+    let filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or("error,phantom_of_scopa=warn".into());
+
+    tracing_subscriber::Registry::default()
+        .with(filter)
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_ansi(false)
+                .with_writer(non_blocking)
+                .with_file(true)
+                .with_line_number(true),
+        )
+        .init();
+
+    std::mem::forget(_guard);
 }
 
 fn setup(mut commands: Commands) {
