@@ -3,29 +3,27 @@ use crate::Card;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum GameEvent {
-    PlayerConnected {
+pub enum ClientEvent {
+    Connect { name: String },
+    Disconnect,
+    PutCard { card: Card },
+    TakeCards { take: Vec<Card>, with: Card },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ServerEvent {
+    Welcome {
         id: PlayerId,
         name: String,
     },
-    PlayerDisconnected {
+    OpponentJoined {
+        name: String,
+        seat: u8,
+    },
+    OpponentLeft {
         id: PlayerId,
         name: String,
-    },
-    StartRound {
-        active_player: PlayerId,
-    },
-    EndRound {
-        points: [Points; 2],
-    },
-    PlayerWon {
-        id: PlayerId,
-    },
-    DealHand {
-        hand: [Card; 3],
-    },
-    PlaceTable {
-        table: [Card; 4],
+        seat: u8,
     },
     PutCard {
         id: PlayerId,
@@ -33,7 +31,27 @@ pub enum GameEvent {
     },
     TakeCards {
         id: PlayerId,
-        take: Vec<Card>,
+        taken: Vec<Card>,
         with: Card,
+        table: Vec<Card>,
+        scopa: bool,
+    },
+    StartGame {
+        active_player: PlayerId,
+        hand: [Card; 3],
+        table: [Card; 4],
+    },
+    StartRound {
+        active_player: PlayerId,
+        hand: [Card; 3],
+    },
+    NewTurn {
+        active_player: PlayerId,
+    },
+    EndGame {
+        points: [Points; 2],
+    },
+    PlayerWon {
+        id: PlayerId,
     },
 }

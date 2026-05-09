@@ -5,6 +5,8 @@ pub type PlayerId = u64;
 
 #[derive(Debug)]
 pub struct Player {
+    pub id: PlayerId,
+    pub seat: u8,
     pub name: String,
     pub points: u8,
     pub scopas: u8,
@@ -13,8 +15,10 @@ pub struct Player {
 }
 
 impl Player {
-    pub fn new(name: &str) -> Self {
+    pub fn new(id: PlayerId, name: &str, seat: u8) -> Self {
         Self {
+            id,
+            seat,
             name: name.into(),
             points: 0,
             scopas: 0,

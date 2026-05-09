@@ -225,6 +225,10 @@ impl Table {
     pub fn clear(&mut self) {
         self.table.clear();
     }
+
+    pub fn to_vec(&self) -> Vec<Card> {
+        self.table.iter().copied().collect()
+    }
 }
 
 #[derive(Debug)]

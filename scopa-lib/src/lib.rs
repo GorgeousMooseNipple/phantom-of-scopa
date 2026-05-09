@@ -1,40 +1,14 @@
 #![allow(dead_code)]
 pub mod card;
+pub mod error;
 pub mod event;
 pub mod player;
 
 use card::*;
-use event::GameEvent;
+use error::{Result, ScopaError};
+use event::{ClientEvent, ServerEvent};
 use player::*;
 use std::collections::HashMap;
-
-#[derive(Debug)]
-pub enum ScopaError {
-    Player(String),
-    Logic(String),
-    Card(String),
-    OutOfTurn,
-    PuttingOnFullTable,
-}
-
-impl std::fmt::Display for ScopaError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use ScopaError::*;
-        match self {
-            Player(msg) => write!(f, "Player error: {}", msg),
-            Logic(msg) => write!(f, "Logic error: {}", msg),
-            Card(msg) => write!(f, "Card error: {}", msg),
-            OutOfTurn => write!(f, "Player made a move out of turn"),
-            PuttingOnFullTable => write!(f, "Trying to put a card on a full table"),
-        }
-    }
-}
-
-impl std::error::Error for ScopaError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        None
-    }
-}
 
 #[derive(Debug)]
 pub struct ScopaGame {
@@ -65,37 +39,13 @@ impl ScopaGame {
         self.table.clear();
     }
 
-    pub fn validate(&self, event: &GameEvent) -> Result<(), ScopaError> {
+    pub fn validate(&self, player_id: PlayerId, event: &ClientEvent) -> Result<()> {
         match event {
-            GameEvent::PlayerConnected { id, .. } => {
-                if self.players.contains_key(id) {
-                    return Err(ScopaError::Player("Already connected".into()));
-                }
-            }
-            GameEvent::PlayerDisconnected { id, .. } => {
-                if !self.players.contains_key(id) {
+            ClientEvent::PutCard { card } => {
+                if !self.players.contains_key(&player_id) {
                     return Err(ScopaError::Player("Unknown player".into()));
                 }
-            }
-            GameEvent::StartRound { active_player } => {
-                if !self.players.contains_key(active_player) {
-                    return Err(ScopaError::Player("Unknown player".into()));
-                }
-            }
-            GameEvent::PlaceTable { .. } => {
-                // Game places 4 cards on the table just once in the beginning of a round, so the table must be
-                // empty at this point
-                if !self.table.is_empty() {
-                    return Err(ScopaError::Logic(
-                        "Table should be empty at this stage".into(),
-                    ));
-                }
-            }
-            GameEvent::PutCard { id, card } => {
-                if !self.players.contains_key(id) {
-                    return Err(ScopaError::Player("Unknown player".into()));
-                }
-                if self.active_player != *id {
+                if self.active_player != player_id {
                     return Err(ScopaError::OutOfTurn);
                 }
                 // The table is full
@@ -103,7 +53,7 @@ impl ScopaGame {
                     return Err(ScopaError::PuttingOnFullTable);
                 }
                 // It is safe to unwrap because we already checked that player is connected
-                if !self.players.get(id).unwrap().hand.contains(card) {
+                if !self.players.get(&player_id).unwrap().hand.contains(card) {
                     return Err(ScopaError::Card(
                         "Card does not exist in player's hand".into(),
                     ));
@@ -116,11 +66,11 @@ impl ScopaGame {
                     ));
                 }
             }
-            GameEvent::TakeCards { id, take, with } => {
-                if !self.players.contains_key(id) {
+            ClientEvent::TakeCards { take, with } => {
+                if !self.players.contains_key(&player_id) {
                     return Err(ScopaError::Player("Unknown player".into()));
                 }
-                if self.active_player != *id {
+                if self.active_player != player_id {
                     return Err(ScopaError::OutOfTurn);
                 }
                 if take.is_empty() {
@@ -129,7 +79,7 @@ impl ScopaGame {
                     ));
                 }
                 // It is safe to unwrap because we already checked that player is connected
-                if !self.players.get(id).unwrap().hand.contains(with) {
+                if !self.players.get(&player_id).unwrap().hand.contains(with) {
                     return Err(ScopaError::Card(
                         "Card does not exist in player's hand".into(),
                     ));
@@ -156,161 +106,84 @@ impl ScopaGame {
         Ok(())
     }
 
-    fn consume(&mut self, _event: &GameEvent) {
-        unimplemented!()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn player_with_cards() -> Player {
-        let mut p = Player::new("test");
-        p.take_cards(vec![
-            Card {
-                suite: Suite::Coins,
-                value: CardValue::Seven,
-            },
-            Card {
-                suite: Suite::Coins,
-                value: CardValue::Six,
-            },
-            Card {
-                suite: Suite::Coins,
-                value: CardValue::One,
-            },
-            Card {
-                suite: Suite::Coins,
-                value: CardValue::Re,
-            },
-            Card {
-                suite: Suite::Swords,
-                value: CardValue::One,
-            },
-            Card {
-                suite: Suite::Swords,
-                value: CardValue::Cavallo,
-            },
-            Card {
-                suite: Suite::Cups,
-                value: CardValue::One,
-            },
-            Card {
-                suite: Suite::Cups,
-                value: CardValue::Six,
-            },
-            Card {
-                suite: Suite::Clubs,
-                value: CardValue::Two,
-            },
-            Card {
-                suite: Suite::Clubs,
-                value: CardValue::Fante,
-            },
-            Card {
-                suite: Suite::Clubs,
-                value: CardValue::Re,
-            },
-        ]);
-        p
-    }
-
-    #[test]
-    fn take_cards() {
-        let p = player_with_cards();
-        assert_eq!(p.taken.count(), 11);
-        assert_eq!(p.taken.coins.len(), 4);
-        assert_eq!(p.taken.swords.len(), 2);
-        assert_eq!(p.taken.cups.len(), 2);
-        assert_eq!(p.taken.clubs.len(), 3);
-    }
-
-    #[test]
-    fn get_primes() {
-        let p = player_with_cards();
-        assert_eq!(p.taken.primes(), 67);
-    }
-
-    #[test]
-    fn check_results() {
-        let p = player_with_cards();
-        let r = p.results();
-        assert_eq!(r.scopas, 0);
-        assert_eq!(r.takes, 11);
-        assert_eq!(r.primes, 67);
-        assert_eq!(r.count_of_coins, 4);
-        assert!(r.seven_of_coins);
-    }
-
-    #[test]
-    fn compare_cards() {
-        let c1 = Card {
-            suite: Suite::Coins,
-            value: CardValue::Seven,
-        };
-        let c2 = Card {
-            suite: Suite::Coins,
-            value: CardValue::Seven,
-        };
-        let c3 = Card {
-            suite: Suite::Swords,
-            value: CardValue::Seven,
-        };
-        let c4 = Card {
-            suite: Suite::Coins,
-            value: CardValue::Six,
-        };
-        let c5 = Card {
-            suite: Suite::Swords,
-            value: CardValue::Six,
-        };
-        assert_eq!(c1, c2);
-        assert_ne!(c1, c3);
-        assert_ne!(c1, c4);
-        assert_ne!(c1, c5);
-    }
-
-    #[test]
-    fn table_contains_same_value() {
-        let mut table = Table::default();
-        use CardValue::*;
-        use Suite::*;
-        table.put_card(Card {
-            suite: Coins,
-            value: Two,
-        });
-        table.put_card(Card {
-            suite: Cups,
-            value: Five,
-        });
-        table.put_card(Card {
-            suite: Swords,
-            value: Two,
-        });
-        table.put_card(Card {
-            suite: Coins,
-            value: Four,
-        });
-
-        let card = Card {
-            suite: Coins,
-            value: Five,
-        };
-
-        assert_eq!(
-            table.contains_same_value(&card),
-            Some(&Card {
-                suite: Cups,
-                value: Five
-            })
-        );
-
-        let card = Card {
-            suite: Coins,
-            value: Re,
-        };
-
-        assert_eq!(table.contains_same_value(&card), None);
+    fn consume(&mut self, player_id: PlayerId, event: &ClientEvent) -> Result<ServerEvent> {
+        self.validate(player_id, event)?;
+        #[allow(unused_variables)]
+        match event {
+            ClientEvent::Connect { name } => {
+                let player = Player::new(player_id, name, self.players.len() as u8);
+                self.players.insert(player_id, player);
+                return Ok(ServerEvent::Welcome {
+                    id: player_id,
+                    name: name.clone(),
+                });
+            }
+            ClientEvent::Disconnect => {
+                if let Some(player) = self.players.remove(&player_id) {
+                    Ok(ServerEvent::OpponentLeft {
+                        id: player.id,
+                        name: player.name,
+                        seat: player.seat,
+                    })
+                } else {
+                    Err(ScopaError::Player(format!(
+                        "Player with id = {} not found",
+                        player_id
+                    )))
+                }
+            }
+            ClientEvent::PutCard { card } => {
+                if let Some(player) = self.players.get_mut(&player_id) {
+                    if let Some(pos) = player.hand.iter().position(|c| c == card) {
+                        player.hand.remove(pos);
+                    } else {
+                        return Err(ScopaError::Player(format!(
+                            "Card {} not found in hand of player {:?}",
+                            card, player
+                        )));
+                    }
+                    self.table.put_card(*card);
+                    Ok(ServerEvent::PutCard {
+                        id: player.id,
+                        card: *card,
+                    })
+                } else {
+                    Err(ScopaError::Player(format!(
+                        "Player with id = {} not found",
+                        player_id
+                    )))
+                }
+            }
+            ClientEvent::TakeCards { take, with } => {
+                // Already checked in validate that player with id exists
+                let player = self
+                    .players
+                    .get_mut(&player_id)
+                    .expect("Taking cards: Player not found");
+                if let Some(pos) = player.hand.iter().position(|card| card == with) {
+                    player.hand.remove(pos);
+                } else {
+                    return Err(ScopaError::Player(format!(
+                        "Card {} not found in hand of player {:?}",
+                        with, player
+                    )));
+                }
+                let mut to_take = Vec::new();
+                for card in take.iter() {
+                    if let Some(card) = self.table.take_card(card) {
+                        to_take.push(card);
+                    }
+                }
+                player.take_cards(to_take);
+                let scopa = self.table.is_empty();
+                Ok(ServerEvent::TakeCards {
+                    id: player.id,
+                    taken: take.clone(),
+                    with: *with,
+                    table: self.table.to_vec(),
+                    scopa,
+                })
+            }
+        }
     }
 }

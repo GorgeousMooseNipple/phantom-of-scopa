@@ -11,7 +11,6 @@ use bevy::ecs::system::EntityCommands;
 use bevy::render::texture::ImageLoaderSettings;
 use bevy::render::texture::ImageSampler;
 use scopa_lib::card;
-use scopa_lib::event::GameEvent;
 
 use bevy::prelude::*;
 use bevy_mod_picking::prelude::*;
