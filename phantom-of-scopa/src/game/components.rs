@@ -165,6 +165,14 @@ pub struct HighlightImage;
 #[derive(Component, Debug)]
 pub struct SoundEffect;
 
+#[derive(Component, Debug)]
+pub struct Draggable;
+
+#[derive(Component, Debug)]
+pub struct Dragged {
+    pub orig_position: Vec3,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct UiCard {
     card: Card,

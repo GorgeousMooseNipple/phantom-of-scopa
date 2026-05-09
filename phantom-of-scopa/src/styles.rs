@@ -68,6 +68,7 @@ pub const DEFAULT_VOLUME: f32 = 0.1;
 pub const TABLE_LAYER: f32 = 1.0;
 pub const ON_TABLE_LAYER: f32 = 2.0;
 pub const AREA_LAYER: f32 = 100.0;
+pub const DRAG_LAYER: f32 = 200.0;
 
 #[derive(Resource)]
 pub struct DefaultFont {

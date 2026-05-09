@@ -54,7 +54,7 @@ pub fn game_setup(
         InGameComponent,
         TablePlayableArea,
         LogicalArea::with_size(Vec2::new(TABLE_WIDTH, TABLE_HEIGHT)),
-        WithOverlay::new(playable_area_overlay),
+        WithOverlay::new(playable_area_overlay).only_on_drag(),
         PickableBundle::default(),
         Transform::from_xyz(0., 0., AREA_LAYER),
     ));
@@ -250,7 +250,6 @@ pub fn debug_areas(
                 Some(n) => n.as_str(),
                 None => "Unnamed",
             };
-            println!("Spawning debug sprite for '{}'", name_str);
             parent.spawn((
                 Name::new(format!("Debug sprite for '{}'", name_str)),
                 InGameComponent,
@@ -288,7 +287,6 @@ pub fn attach_overlays(
             Some(n) => n.as_str(),
             None => "Unnamed",
         };
-        println!("Spawning highlight overlay for '{}'", name_str);
         let mut overlay_child = commands.spawn((
             Name::new(format!("Highlight overlay for '{}'", name_str)),
             InGameComponent,
@@ -314,14 +312,19 @@ pub fn show_overlay_on_cursor_over(
     mut cursor_over: EventReader<Pointer<Over>>,
     mut overlays: Query<(&Name, &mut Visibility), With<HighlightOverlay>>,
     highlightable: Query<(Entity, &WithOverlay), With<WithOverlay>>,
+    dragged: Query<(), With<Dragged>>,
 ) {
     for over in cursor_over.read() {
         if let Ok((entity, overlay)) = highlightable.get(over.target) {
-            if !overlay.overlay.is_some() || overlay.on_drag {
+            if let Some(overlay_entity) = overlay.overlay {
+                if overlay.on_drag && dragged.is_empty() {
+                    continue;
+                }
+                if let Ok((name, mut visibility)) = overlays.get_mut(overlay_entity) {
+                    *visibility = Visibility::Visible;
+                }
+            } else {
                 continue;
-            }
-            if let Ok((name, mut visibility)) = overlays.get_mut(overlay.overlay.unwrap()) {
-                *visibility = Visibility::Visible;
             }
         }
     }
@@ -334,7 +337,7 @@ pub fn hide_overlay_on_cursor_out(
 ) {
     for out in cursor_out.read() {
         if let Ok((entity, overlay)) = highlightable.get(out.target) {
-            if !overlay.overlay.is_some() || overlay.on_drag {
+            if !overlay.overlay.is_some() {
                 continue;
             }
             if let Ok((name, mut visibility)) = overlays.get_mut(overlay.overlay.unwrap()) {
@@ -422,6 +425,7 @@ pub fn on_draw_hand(
                     InGameComponent,
                     PlayerCard { card: *card },
                     AtSlot { slot: slot_entity },
+                    Draggable,
                     SpriteBundle {
                         texture: card_image,
                         transform: Transform::from_xyz(0., 0., 1.0).with_scale(Vec3::splat(0.01)),
@@ -517,7 +521,7 @@ pub fn on_put_event(
 pub fn card_selection(
     mut commands: Commands,
     mut clicks: EventReader<Pointer<Click>>,
-    hand_cards: Query<Entity, With<PlayerCard>>,
+    hand_cards: Query<Entity, (With<PlayerCard>, Without<Dragged>)>,
     table_cards: Query<Entity, With<TableCard>>,
     selected: Query<Entity, With<SelectedCard>>,
 ) {
@@ -566,4 +570,59 @@ pub fn selection_visuals(
             sprite.color = DEFAULT_TINT;
         }
     }
+}
+
+pub fn drag_start(
+    mut commands: Commands,
+    mut events: EventReader<Pointer<DragStart>>,
+    mut draggable: Query<(Entity, &mut Transform), With<Draggable>>,
+    camera: Query<(&Camera, &GlobalTransform)>,
+) {
+    for event in events.read() {
+        if let Ok((entity, mut transform)) = draggable.get_mut(event.target) {
+            commands.entity(entity).insert(Dragged {
+                orig_position: transform.translation,
+            });
+            transform.translation.z = DRAG_LAYER;
+            break;
+        }
+    }
+    events.clear();
+}
+
+pub fn drag_move(
+    mut events: EventReader<Pointer<Drag>>,
+    mut dragged: Query<&mut Transform, With<Dragged>>,
+) {
+    let mut drag_delta = Vec2::ZERO;
+    for drag in events.read() {
+        if dragged.contains(drag.target) {
+            drag_delta += drag.delta;
+        }
+    }
+
+    if drag_delta == Vec2::ZERO {
+        return;
+    }
+
+    if let Ok(mut transform) = dragged.get_single_mut() {
+        // println!("Dragging by {:?}", drag_delta);
+        transform.translation.x += drag_delta.x;
+        transform.translation.y -= drag_delta.y;
+    }
+}
+
+pub fn drag_end(
+    mut commands: Commands,
+    mut events: EventReader<Pointer<DragEnd>>,
+    mut dragged: Query<(Entity, &mut Transform, &Dragged), With<Dragged>>,
+) {
+    for event in events.read() {
+        if let Ok((entity, mut transform, dragged)) = dragged.get_single_mut() {
+            transform.translation = dragged.orig_position;
+            commands.entity(entity).remove::<Dragged>();
+            break;
+        }
+    }
+    events.clear();
 }

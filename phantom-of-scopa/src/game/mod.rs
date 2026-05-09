@@ -69,6 +69,12 @@ pub fn game_plugin(app: &mut App) {
             Update,
             (selection_visuals, on_draw_hand, on_put_event).in_set(InGameSet),
         )
+        .add_systems(
+            Update,
+            (drag_start, drag_move, drag_end)
+                .chain()
+                .in_set(DragAndDrop),
+        )
         .add_systems(Update, (card_selection).in_set(PlayerTurnSet))
         .add_systems(OnExit(GameState::Playing), hide_overlays)
         .add_systems(OnExit(AppState::InGame), despawn_screen::<InGameComponent>);
