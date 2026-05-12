@@ -106,8 +106,7 @@ impl ScopaGame {
         Ok(())
     }
 
-    fn consume(&mut self, player_id: PlayerId, event: &ClientEvent) -> Result<ServerEvent> {
-        self.validate(player_id, event)?;
+    pub fn consume(&mut self, player_id: PlayerId, event: &ClientEvent) -> Result<ServerEvent> {
         #[allow(unused_variables)]
         match event {
             ClientEvent::Connect { name } => {

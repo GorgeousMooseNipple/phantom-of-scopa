@@ -62,7 +62,7 @@ impl Player {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Results {
     pub takes: u8,
     pub count_of_coins: u8,
@@ -71,7 +71,7 @@ pub struct Results {
     pub scopas: u8,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Points {
     pub id: PlayerId,
     pub points: u8,

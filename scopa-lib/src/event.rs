@@ -2,7 +2,7 @@ use crate::player::{PlayerId, Points};
 use crate::Card;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ClientEvent {
     Connect { name: String },
     Disconnect,
@@ -10,7 +10,7 @@ pub enum ClientEvent {
     TakeCards { take: Vec<Card>, with: Card },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ServerEvent {
     Welcome {
         id: PlayerId,
@@ -53,5 +53,11 @@ pub enum ServerEvent {
     },
     PlayerWon {
         id: PlayerId,
+    },
+    ActionDenied {
+        reason: String,
+    },
+    Error {
+        description: String,
     },
 }
